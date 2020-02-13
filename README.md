@@ -1,4 +1,4 @@
-Documentarist<img width="12%" align="right" src=".graphics/documentarist-icon.svg">
+Documentarist<img width="15%" align="right" src=".graphics/documentarist-icon.svg">
 =============
 
 The goal of _Documentarist_ is to create a software system to process digital document and photo archives at the Caltech Library, and annotate each page or image with information about its contents.
