@@ -1,7 +1,7 @@
-Documentarist<img width="15%" align="right" src=".graphics/documentarist-icon.svg">
+Documentarist<img width="14%" align="right" src=".graphics/documentarist-icon.svg">
 =============
 
-The goal of _Documentarist_ is to create a software system to process digital document and photo archives at the Caltech Library, and annotate each page or image with information about its contents.
+A project to develop an automated system that can take scanned documents and photos in the Caltech Archives and extract text and other information to enhance the metadata of the collection.
 
 [![License](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg?style=flat-square)](https://choosealicense.com/licenses/bsd-3-clause)
 <!-- [![Latest release](https://img.shields.io/github/v/release/caltechlibrary/template.svg?style=flat-square&color=b44e88)](https://github.com/caltechlibrary/template/releases) -->
