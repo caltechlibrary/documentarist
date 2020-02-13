@@ -1,25 +1,27 @@
 {
   "@context": "https://doi.org/10.5063/schema/codemeta-2.0",
   "@type": "SoftwareSourceCode",
-  "description": "YOUR DESCRIPTION",
-  "name": "YOUR REPOSITORY NAME",
-  "codeRepository": "https://github.com/caltechlibrary/REPONAME",
-  "issueTracker": "https://github.com/caltechlibrary/REPONAME/issues",
-  "license": "https://github.com/caltechlibrary/REPONAME/blob/master/LICENSE",
+  "description": "Process Caltech Archives' digital documents and photos, and annotate each page or image with information about its contents",
+  "name": "documentarist",
+  "codeRepository": "https://github.com/caltechlibrary/documentarist",
+  "issueTracker": "https://github.com/caltechlibrary/documentarist/issues",
+  "license": "https://github.com/caltechlibrary/documentarist/blob/master/LICENSE",
   "version": "1.0.0",
   "author": [
     {
       "@type": "Person",
-      "givenName": "FIRSTNAME",
-      "familyName": "LASTNAME",
+      "givenName": "Michael",
+      "familyName": "Hucka",
       "affiliation": "California Institute of Technology Library",
-      "email": "EMAIL",
-      "@id": "https://orcid.org/YOUR-ORCID"
+      "email": "mhucka@library.caltech.edu",
+      "@id": "https://orcid.org/0000-0001-9105-5960"
     }],
   "developmentStatus": "active",
-  "downloadUrl": "https://github.com/caltechlibrary/REPONAME/archive/1.0.0.zip",
+  "downloadUrl": "https://github.com/caltechlibrary/documentarist/archive/1.0.0.zip",
   "keywords": [
     "software",
+    "handwritten-text-recognition",
+    "machine-learning"
   ],
-  "maintainer": "https://orcid.org/YOUR-ORCID",
+  "maintainer": "https://orcid.org/0000-0001-9105-5960",
 }
