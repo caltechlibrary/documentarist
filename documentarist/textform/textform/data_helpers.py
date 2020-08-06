@@ -4,6 +4,8 @@ data_helpers: data manipulation utilities
 
 import dateparser
 import datetime
+from   datetime import datetime as dt
+from   tzlocal import get_localzone
 
 
 # Constants.
@@ -43,7 +45,23 @@ def expand_range(text):
         return text
 
 
+def timestamp():
+    '''Return a string describing the date and time right now.'''
+    return dt.now(get_localzone()).strftime(DATE_FORMAT)
+
+
 def parse_datetime(string):
     '''Parse a human-written time/date string using dateparser's parse()
 function with predefined settings.'''
     return dateparser.parse(string, settings = {'RETURN_AS_TIMEZONE_AWARE': True})
+
+
+def plural(word, count):
+    '''Simple pluralization; adds "s" to the end of "word" if count > 1.'''
+    if isinstance(count, int):
+        return word + 's' if count > 1 else word
+    elif isinstance(count, (list, set, dict)):
+        return word + 's' if len(count) > 1 else word
+    else:
+        # If we don't recognize the kind of thing it is, return it unchanged.
+        return word
