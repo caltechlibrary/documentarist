@@ -1,5 +1,5 @@
 '''
-__main__: main command-line interface to TextForm
+__main__: main command-line interface to TextKind
 
 Authors
 -------
@@ -14,16 +14,13 @@ is open-source software released under a 3-clause BSD license.  Please see the
 file "LICENSE" for more information.
 '''
 
-from   datetime import datetime as dt
 import os
 from   os import path
-from   PIL import Image, ImageFile
 import plac
-from   rich.traceback import install as install_rich_traceback
 import sys
 
 import textform
-from   .data_helpers import DATE_FORMAT
+from   .data_helpers import DATE_FORMAT, timestamp
 from   .debug import set_debug, log
 from   .exceptions import *
 from   .exit_codes import ExitCode
@@ -44,6 +41,7 @@ def main(image = 'I', debug = 'OUT'):
     debugging = debug != 'OUT'
     if debugging:
         set_debug(True, debug)
+        from rich.traceback import install as install_rich_traceback
         install_rich_traceback()
         import faulthandler
         faulthandler.enable()
@@ -51,11 +49,11 @@ def main(image = 'I', debug = 'OUT'):
     if image == 'I':
         exit('Must supply an input image')
     elif not readable(image):
-        exit('File unreadable: {image}')
+        exit(f'File unreadable: {image}')
 
     # Do the real work --------------------------------------------------------
 
-    if __debug__: log('='*8 + ' started {}' + '='*8, dt.now().strftime(DATE_FORMAT))
+    if __debug__: log('='*8 + f' started {timestamp()} ' + '='*8)
     exception = None
     try:
         pass
@@ -70,17 +68,17 @@ def main(image = 'I', debug = 'OUT'):
         if type(exception[1]) == CannotProceed:
             exit_code = exception[1].args[0]
         elif type(exception[1]) in [KeyboardInterrupt, UserCancelled]:
-            if __debug__: log('received {}', exception[1].__class__.__name__)
+            if __debug__: log(f'received {exception[1].__class__.__name__}')
             exit_code = ExitCode.user_interrupt
         else:
             exit_code = ExitCode.exception
             from traceback import format_exception
             ex_type = str(exception[1])
             details = ''.join(format_exception(*exception))
-            if __debug__: log('Exception: {}\n{}', ex_type, details)
+            if __debug__: log(f'Exception: {ex_type}\n{details}')
             if debugging:
                 import pdb; pdb.set_trace()
-    if __debug__: log('exiting')
+    if __debug__: log('_'*8 + f' stopped {timestamp()} ' + '_'*8)
     exit(exit_code.value[0])
 
 
