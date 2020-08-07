@@ -1,5 +1,5 @@
 '''
-data_helpers: data manipulation utilities
+data_utils: data manipulation utilities
 '''
 
 import dateparser
