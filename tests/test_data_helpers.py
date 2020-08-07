@@ -1,6 +1,6 @@
 import sys
 sys.path.append('../common')
-from common.data_helpers import *
+from common.data_utils import *
 
 def test_slice():
     assert list(slice([1, 2, 3, 4], 2)) == [[1, 3], [2, 4]]

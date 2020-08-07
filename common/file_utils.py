@@ -1,5 +1,5 @@
 '''
-files.py: utilities for working with files.
+file_utils.py: utilities for working with files.
 
 Authors
 -------
