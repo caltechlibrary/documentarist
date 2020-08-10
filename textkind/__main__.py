@@ -19,24 +19,33 @@ from   os import path
 import plac
 import sys
 
-import textform
-from   .data_utils import DATE_FORMAT, timestamp
-from   .debug import set_debug, log
-from   .exceptions import *
-from   .exit_codes import ExitCode
-from   .files import readable
+sys.path.append('../common')
+
+import textkind
+from   .main_body import MainBody
+
+from   common.data_utils import DATE_FORMAT, timestamp
+from   common.debug import set_debug, log
+from   common.exceptions import *
+from   common.exit_codes import ExitCode
+from   common.file_utils import readable
+from   common.ui import UI, inform, warn, alert, alert_fatal
 
 
 # Main program.
 # ......................................................................
 
 @plac.annotations(
-    image = ('input file (an image)',                             'option', 'i'),
-    debug = ('write detailed trace to "OUT" ("-" means console)', 'option', '@'),
+    extended = ('produce extended results (as JSON data)',            'flag',   'e'),
+    output   = ('write output to destination "O" (default: console)', 'option', 'o'),
+    debug    = ('write detailed trace to "OUT" ("-" means console)',  'option', '@'),
+    files    = 'file(s), directory(ies) of files, or URL(s)',
 )
 
-def main(image = 'I', debug = 'OUT'):
-    # Preprocess arguments and handle early exits -----------------------------
+def main(extended = False, output = 'O', debug = 'OUT', *files):
+    '''Report if an image contains printed or handwritten text.'''
+
+    # Set up debugging as soon as possible, if requested ----------------------
 
     debugging = debug != 'OUT'
     if debugging:
@@ -46,17 +55,18 @@ def main(image = 'I', debug = 'OUT'):
         import faulthandler
         faulthandler.enable()
 
-    if image == 'I':
-        exit('Must supply an input image')
-    elif not readable(image):
-        exit(f'File unreadable: {image}')
-
     # Do the real work --------------------------------------------------------
 
     if __debug__: log('='*8 + f' started {timestamp()} ' + '='*8)
     exception = None
     try:
-        pass
+        ui = UI('TextKind', 'report whether text in image is handwritten or printed')
+        body = MainBody(files = files,
+                        output = None if output == 'O' else output,
+                        extended = extended)
+        ui.start()
+        body.run()
+        exception = body.exception
     except Exception as ex:
         # MainBody exceptions are caught in its thread, so this is something else.
         exception = sys.exc_info()
@@ -89,7 +99,7 @@ def main(image = 'I', debug = 'OUT'):
 if sys.platform.startswith('win'):
     main.prefix_chars = '/'
 
-# The following allows users to invoke this using "python3 -m eprints2archives".
+# The following allows users to invoke this using "python3 -m textkind".
 if __name__ == '__main__':
     plac.call(main)
 
