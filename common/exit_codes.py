@@ -19,7 +19,8 @@ from aenum import Enum, unique
 @unique
 class ExitCode(Enum):
     success        = 0, 'success -- program completed normally'
-    no_net         = 1, 'no network detected -- cannot proceed'
+    no_net         = 1, 'no network detected'
     bad_arg        = 2, 'encountered a bad or missing value for an option'
-    user_interrupt = 3, 'the user interrupted execution'
-    exception      = 4, 'an exception or fatal error occurred'
+    file_error     = 3, 'encountered a problem with a file'
+    user_interrupt = 4, 'the user interrupted execution'
+    exception      = 5, 'an exception or fatal error occurred'
