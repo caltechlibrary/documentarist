@@ -5,7 +5,7 @@ data_utils: data manipulation utilities
 import dateparser
 import datetime
 from   datetime import datetime as dt
-from   tzlocal import get_localzone
+from   dateutil import tz
 
 
 # Constants.
@@ -47,7 +47,7 @@ def expand_range(text):
 
 def timestamp():
     '''Return a string describing the date and time right now.'''
-    return dt.now(get_localzone()).strftime(DATE_FORMAT)
+    return dt.now(tz = tz.tzlocal()).strftime(DATE_FORMAT)
 
 
 def parse_datetime(string):
