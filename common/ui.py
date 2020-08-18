@@ -20,7 +20,6 @@ file "LICENSE" for more information.
 '''
 
 import getpass
-from   pubsub import pub
 from   queue import Queue
 from   rich.console import Console
 from   rich.style import Style
@@ -218,7 +217,8 @@ class CLI(UIBase):
         self._queue = Queue()
 
         # Initialize output configuration.
-        self._console = Console(theme = _CLI_THEME)
+        self._console = Console(theme = _CLI_THEME,
+                                color_system = "auto" if use_color else None)
 
 
     def start(self):
@@ -291,7 +291,8 @@ class CLI(UIBase):
         whether the user cancelled the dialog.  If 'user' is provided, then
         this method offers that as a default for the user.  If both 'user'
         and 'pswd' are provided, both the user and password are offered as
-        defaults but the password is not shown to the user.
+        defaults but the password is not shown to the user.  If the user
+        responds with empty strings, the values returned are '' and not None.
         '''
         try:
             text = (prompt + ' [default: ' + user + ']: ') if user else (prompt + ': ')
@@ -303,8 +304,10 @@ class CLI(UIBase):
             input_pswd = password(text)
             if len(input_pswd) == 0:
                 input_pswd = pswd
-            return input_user, input_pswd, False
-        except KeyboardInterrupt:
+            final_user = '' if input_user is None else input_user
+            final_pswd = '' if input_pswd is None else input_pswd
+            return final_user, final_pswd, False
+        except (KeyboardInterrupt, UserCancelled):
             return user, pswd, True
 
 
