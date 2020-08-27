@@ -10,3 +10,9 @@ def test_slice():
 def test_expand_range():
     assert expand_range('1-5') == ['1', '2', '3', '4', '5']
     assert expand_range('2-10') == ['2', '3', '4', '5', '6', '7', '8', '9', '10']
+
+
+def test_unique():
+    assert unique([1, 2, 3]) == [1, 2, 3]
+    assert unique([1, 2, 3, 3]) == [1, 2, 3]
+    assert unique([3, 2, 2]) == [2, 3]
