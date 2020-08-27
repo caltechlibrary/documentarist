@@ -25,3 +25,10 @@ def test_ordinal():
     assert ordinal(4) == '4th'
     assert ordinal(5) == '5th'
     assert ordinal(10) == '10th'
+
+
+def test_plural():
+    assert plural('flower', 1) == 'flower'
+    assert plural('flower', 2) == 'flowers'
+    assert plural('error', [1]) == 'error'
+    assert plural('error', [1, 2]) == 'errors'
