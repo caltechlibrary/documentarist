@@ -53,7 +53,7 @@ def set_debug(enabled, dest = '-'):
         # Set the appropriate output destination if we haven't already.
         if enabled:
             logger    = logging.getLogger(__package__)
-            formatter = logging.Formatter('%(name)s %(message)s')
+            formatter = logging.Formatter('%(threadName)s %(message)s')
             # We only allow one active destination.
             for h in logger.handlers:
                 logger.removeHandler(h)
@@ -72,6 +72,12 @@ def set_debug(enabled, dest = '-'):
             logger.setLevel(WARNING)
 
 
+# You might think that the way to get the current caller info when the log
+# function is called would be to use logger.findCaller(). I tried that, and it
+# produced very different information, even when using various values of
+# stacklevel as the argument. The code below instead uses the Python inspect
+# module to get the correct stack frame at run time.
+
 def log(s, *other_args):
     '''Logs a debug message. 's' can contain format directive, and the
     remaining arguments are the arguments to the format string.
@@ -81,8 +87,26 @@ def log(s, *other_args):
         # the string format from always being performed if logging is not
         # turned on and the user isn't running Python with -O.
         if getattr(sys.modules[__package__], '_debugging'):
-            func = inspect.currentframe().f_back.f_code.co_name
-            file_path = inspect.currentframe().f_back.f_code.co_filename
-            filename = path.basename(file_path)
-            logging.getLogger(__package__).debug('{} {}(): '.format(filename, func)
-                                                 + s.format(*other_args))
+            frame  = inspect.currentframe().f_back
+            func   = frame.f_code.co_name
+            lineno = frame.f_lineno
+            file   = path.basename(frame.f_code.co_filename)
+            logger = logging.getLogger(__package__)
+            logger.debug(f'{file}:{lineno} {func}() -- ' + s.format(*other_args))
+
+
+def logr(s):
+    '''Logs a debug message. 's' is taken as-is; unlike log(...), logr(...)
+    does not apply format to the string.
+    '''
+    if __debug__:
+        # This test for the level may seem redundant, but it's not: it prevents
+        # the string format from always being performed if logging is not
+        # turned on and the user isn't running Python with -O.
+        if getattr(sys.modules[__package__], '_debugging'):
+            frame  = inspect.currentframe().f_back
+            func   = frame.f_code.co_name
+            lineno = frame.f_lineno
+            file   = path.basename(frame.f_code.co_filename)
+            logger = logging.getLogger(__package__)
+            logger.debug(f'{file}:{lineno} {func}() -- ' + s)
