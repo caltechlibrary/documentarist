@@ -20,11 +20,18 @@ with datetime.strftime().'''
 # .............................................................................
 
 def slice(lst, n):
+    '''Yield n number of slices from lst.'''
     # Original algorithm from Jurgen Strydom posted 2019-02-21 Stack Overflow
     # https://stackoverflow.com/a/54802737/743730
-    '''Yield n number of slices from lst.'''
     for i in range(0, n):
         yield lst[i::n]
+
+
+def unique(lst):
+    '''Take list "lst" and return a version without duplicates.'''
+    # This exists because I think the intention behind list(set(...)) is
+    # too easily lost and makes code muddier.
+    return list(set(lst))
 
 
 def ordinal(n):
