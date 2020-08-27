@@ -16,3 +16,12 @@ def test_unique():
     assert unique([1, 2, 3]) == [1, 2, 3]
     assert unique([1, 2, 3, 3]) == [1, 2, 3]
     assert unique([3, 2, 2]) == [2, 3]
+
+
+def test_ordinal():
+    assert ordinal(1) == '1st'
+    assert ordinal(2) == '2nd'
+    assert ordinal(3) == '3rd'
+    assert ordinal(4) == '4th'
+    assert ordinal(5) == '5th'
+    assert ordinal(10) == '10th'
