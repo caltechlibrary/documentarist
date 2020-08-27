@@ -79,9 +79,9 @@ include percentages indicating the strength of the assessment.
     ui = body = exception = None
     try:
         ui = UI('TextKind', 'report whether text in image is handwritten or printed')
-        body = MainBody(files = files,
-                        output = None if output == 'O' else output,
-                        extended = extended)
+        body = MainBody(input_files = files,
+                        output_file = None if output == 'O' else output,
+                        extended    = extended)
         ui.start()
         body.run()
         exception = body.exception

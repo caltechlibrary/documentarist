@@ -33,20 +33,24 @@ class MainBody():
         if __debug__: log('finished MainBody')
 
 
+    def stop(self):
+        pass
+
+
     def _do_preflight(self):
         '''Check the option values given by the user, and do other prep.'''
 
         prefix = '/' if sys.platform.startswith('win') else '-'
         hint = f'(Hint: use {prefix}h for help.)'
 
-        if not self.files:
+        if not self.input_files:
             alert_fatal(f'Must supply an input image. {hint}')
             raise CannotProceed(ExitCode.bad_arg)
-        elif any(item.startswith('-') for item in self.files):
+        elif any(item.startswith('-') for item in self.input_files):
             alert(f'Unrecognized option in arguments. {hint}')
             raise CannotProceed(ExitCode.bad_arg)
         else:
-            for file in self.files:
+            for file in self.input_files:
                 if not path.exists(file):
                     alert_fatal(f'File not found: {file}')
                     raise CannotProceed(ExitCode.file_error)
@@ -54,13 +58,25 @@ class MainBody():
                     alert_fatal(f'File not readable: {file}')
                     raise CannotProceed(ExitCode.file_error)
 
-        if self.output and not writable(self.output):
-            alert_fatal(f'File not writable: {self.output}')
+        if self.output_file and not writable(self.output_file):
+            alert_fatal(f'File not writable: {self.output_file}')
             raise CannotProceed(ExitCode.file_error)
-        elif self.output is None:
-            self.output = sys.stdout
+        elif self.output_file is None:
+            self.output_file = sys.stdout
+
+        # Fixme: put classifier in separate file classifier.py
+        # Have an object that has method to initialize and load model
 
 
     def _do_main_work(self):
         '''Performs the core work of this program.'''
-        pass
+
+        for file in self.input_files:
+            inform(f'Analyzing file: {file}')
+
+            # classifier should have method that takes image and returns json
+
+            with open(self.output_file, 'w') as outfile:
+                outfile.write('typed\n')
+
+        inform('Done')
