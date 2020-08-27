@@ -29,6 +29,7 @@ from   common.debug import set_debug, log
 from   common.exceptions import *
 from   common.exit_codes import ExitCode
 from   common.file_utils import readable
+from   common.interruptions import interrupt, interrupted
 from   common.ui import UI, inform, warn, alert, alert_fatal
 
 
@@ -39,11 +40,28 @@ from   common.ui import UI, inform, warn, alert, alert_fatal
     extended = ('produce extended results (as JSON data)',            'flag',   'e'),
     output   = ('write output to destination "O" (default: console)', 'option', 'o'),
     debug    = ('write detailed trace to "OUT" ("-" means console)',  'option', '@'),
-    files    = 'file(s), directory(ies) of files, or URL(s)',
+    files    = 'file(s)',
 )
 
 def main(extended = False, output = 'O', debug = 'OUT', *files):
-    '''Report if an image contains printed or handwritten text.'''
+    '''Report if an image contains printed or handwritten text.
+
+The results of the analysis are printed to the terminal's standard output
+stream by default.  If given the option -o (or /o on Windows), the results
+are instead written to the file indicated as the value of the option.  For
+example, "-o results.txt" will cause the analysis results to be written,
+one line per file, in "results.txt".
+
+The output by default is simply a classification of the content, given as
+one of the following words:
+
+   handwritten -- the text is judged to be handwritten
+   printed     -- the text is judged to be printed
+   none        -- no text could be found
+
+If the option -e (or /e on Windows) is given, then the output will also
+include percentages indicating the strength of the assessment.
+    '''
 
     # Set up debugging as soon as possible, if requested ----------------------
 
@@ -58,7 +76,7 @@ def main(extended = False, output = 'O', debug = 'OUT', *files):
     # Do the real work --------------------------------------------------------
 
     if __debug__: log('='*8 + f' started {timestamp()} ' + '='*8)
-    exception = None
+    ui = body = exception = None
     try:
         ui = UI('TextKind', 'report whether text in image is handwritten or printed')
         body = MainBody(files = files,
@@ -67,6 +85,12 @@ def main(extended = False, output = 'O', debug = 'OUT', *files):
         ui.start()
         body.run()
         exception = body.exception
+    except (KeyboardInterrupt, UserCancelled) as ex:
+        # In Python, the main thread (i.e., this one) is the one that gets ^C.
+        alert('Quit received; shutting down ...')
+        interrupt()
+        body.stop()
+        exception = sys.exc_info()
     except Exception as ex:
         # MainBody exceptions are caught in its thread, so this is something else.
         exception = sys.exc_info()
