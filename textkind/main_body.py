@@ -1,3 +1,4 @@
+import json
 from   os import path
 import sys
 
@@ -9,6 +10,8 @@ from   common.exceptions import *
 from   common.exit_codes import ExitCode
 from   common.file_utils import readable, writable
 from   common.ui import UI, inform, warn, alert, alert_fatal
+
+from   .classify import classify
 
 
 class MainBody():
@@ -47,7 +50,7 @@ class MainBody():
             alert_fatal(f'Must supply an input image. {hint}')
             raise CannotProceed(ExitCode.bad_arg)
         elif any(item.startswith('-') for item in self.input_files):
-            alert(f'Unrecognized option in arguments. {hint}')
+            alert_fatal(f'Unrecognized option in arguments. {hint}')
             raise CannotProceed(ExitCode.bad_arg)
         else:
             for file in self.input_files:
@@ -71,12 +74,14 @@ class MainBody():
     def _do_main_work(self):
         '''Performs the core work of this program.'''
 
-        for file in self.input_files:
-            inform(f'Analyzing file: {file}')
+        results = [classify(file) for file in self.input_files]
 
-            # classifier should have method that takes image and returns json
-
+        if self.output_file == sys.stdout:
+            for item in results:
+                inform(f'{item["file"]}: {item["text kind"]}')
+        else:
             with open(self.output_file, 'w') as outfile:
-                outfile.write('typed\n')
+                json.dump(results, outfile, indent = 4)
+            inform(f'Results writtent to {self.output_file}')
 
         inform('Done')
