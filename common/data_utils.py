@@ -46,6 +46,12 @@ def expand_range(text):
     # This makes the range 1-100 be 1, 2, ..., 100 instead of 1, 2, ..., 99
     if '-' in text:
         range_list = text.split('-')
+        # Malformed cases of -x, where first number is missing.  Take it as 1.
+        if not range_list[0].isdigit():
+            range_list = [1, range_list[1]]
+        # Malformed cases of x-, where 2nd number missing.  Can't handle this.
+        if not range_list[1].isdigit():
+            raise ValueError(f'Malformed range expression: "{text}"')
         range_list.sort(key = int)
         return [*map(str, range(int(range_list[0]), int(range_list[1]) + 1))]
     else:
