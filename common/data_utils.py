@@ -73,7 +73,7 @@ def plural(word, count):
     '''Simple pluralization; adds "s" to the end of "word" if count > 1.'''
     if isinstance(count, int):
         return word + 's' if count > 1 else word
-    elif isinstance(count, (list, set, dict)):
+    elif isinstance(count, (list, set, dict)) or type(count) is {}.values().__class__:
         return word + 's' if len(count) > 1 else word
     else:
         # If we don't recognize the kind of thing it is, return it unchanged.
