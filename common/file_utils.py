@@ -14,8 +14,10 @@ is open-source software released under a 3-clause BSD license.  Please see the
 file "LICENSE" for more information.
 '''
 
+import inspect
 import os
 from   os import path
+import sys
 import tempfile
 
 
@@ -50,3 +52,12 @@ def writable(dest):
     else:
         # Path is a file but doesn't exist yet. Can we write to the parent dir?
         return dir_writable(path.dirname(dest))
+
+
+def module_path():
+    '''Returns the absolute path to our module installation directory.'''
+    # The path returned by module.__path__ is to the directory containing
+    # the __init__.py file.
+    stack = inspect.stack()[1]
+    package = inspect.getmodule(stack[0]).__package__
+    return path.abspath(path.dirname(sys.modules[package].__file__))
