@@ -14,10 +14,13 @@ is open-source software released under a 3-clause BSD license.  Please see the
 file "LICENSE" for more information.
 '''
 
+from   boltons import ecoutils
 import os
 from   os import path
 import plac
+from   sidetrack import set_debug, log, logr
 import sys
+import yaml
 
 sys.path.append('../common')
 
@@ -25,7 +28,6 @@ import textkind
 from   .main_body import MainBody
 
 from   common.data_utils import DATE_FORMAT, timestamp
-from   common.debug import set_debug, log
 from   common.exceptions import *
 from   common.exit_codes import ExitCode
 from   common.file_utils import readable
@@ -37,13 +39,16 @@ from   common.ui import UI, inform, warn, alert, alert_fatal
 # ......................................................................
 
 @plac.annotations(
-    extended = ('produce extended results (as JSON data)',            'flag',   'e'),
-    output   = ('write output to destination "O" (default: console)', 'option', 'o'),
-    debug    = ('write detailed trace to "OUT" ("-" means console)',  'option', '@'),
+    extended = ('produce extended results (as JSON data)',             'flag',   'e'),
+    output   = ('write output to destination "O" (default: console)',  'option', 'o'),
+    quiet    = ('do not print informational messages while working',   'flag',   'q'),
+    no_color = ('do not color-code terminal output',                   'flag',   'C'),
+    debug    = ('write detailed trace to "OUT" ("-" means console)',   'option', '@'),
     files    = 'file(s)',
 )
 
-def main(extended = False, output = 'O', debug = 'OUT', *files):
+def main(extended = False, output = 'O', quiet = False,
+         no_color = False, debug = 'OUT', *files):
     '''Report if an image contains printed or handwritten text.
 
 The results of the analysis are printed to the terminal's standard output
@@ -61,28 +66,25 @@ one of the following words:
 
 If the option -e (or /e on Windows) is given, then the output will also
 include percentages indicating the strength of the assessment.
-    '''
+'''
+    # Set up debug logging as soon as possible, if requested ------------------
 
-    # Set up debugging as soon as possible, if requested ----------------------
-
-    debugging = debug != 'OUT'
-    if debugging:
-        set_debug(True, debug)
-        from rich.traceback import install as install_rich_traceback
-        install_rich_traceback()
+    if debug != 'OUT':
+        set_debug(True, debug, extra = "%(threadName)s")
         import faulthandler
         faulthandler.enable()
 
     # Do the real work --------------------------------------------------------
 
     if __debug__: log('='*8 + f' started {timestamp()} ' + '='*8)
+    if __debug__: log('system details:\n{}', yaml.dump(ecoutils.get_profile()))
     ui = body = exception = None
     try:
-        ui = UI('TextKind', 'report whether text in image is handwritten or printed')
-        body = MainBody(input_files = files,
-                        output_file = None if output == 'O' else output,
-                        extended    = extended)
+        ui = UI('TextKind', 'report whether text in image is handwritten or printed',
+                use_color = not no_color, be_quiet = quiet)
         ui.start()
+        body = MainBody(input_files = files, extended = extended,
+                        output_file = None if output == 'O' else output)
         body.run()
         exception = body.exception
     except (KeyboardInterrupt, UserCancelled) as ex:
@@ -99,21 +101,21 @@ include percentages indicating the strength of the assessment.
 
     exit_code = ExitCode.success
     if exception:
-        if type(exception[1]) == CannotProceed:
-            exit_code = exception[1].args[0]
-        elif type(exception[1]) in [KeyboardInterrupt, UserCancelled]:
+        if type(exception) == CannotProceed:
+            exit_code = exception.args[0]
+        elif type(exception) in [KeyboardInterrupt, UserCancelled]:
             if __debug__: log(f'received {exception[1].__class__.__name__}')
             exit_code = ExitCode.user_interrupt
         else:
+            alert_fatal(f'A fatal error occurred: {exception}')
+            if __debug__:
+                from traceback import format_tb
+                msg = str(exception)
+                details = ''.join(format_tb(exception.__traceback__))
+                logr(f'Exception: {msg}\n{details}')
             exit_code = ExitCode.exception
-            from traceback import format_exception
-            ex_type = str(exception[1])
-            details = ''.join(format_exception(*exception))
-            if __debug__: log(f'Exception: {ex_type}\n{details}')
-            if debugging:
-                import pdb; pdb.set_trace()
     if __debug__: log('_'*8 + f' stopped {timestamp()} ' + '_'*8)
-    exit(exit_code.value[0])
+    exit(int(exit_code))
 
 
 # Main entry point.
@@ -126,11 +128,3 @@ if sys.platform.startswith('win'):
 # The following allows users to invoke this using "python3 -m textkind".
 if __name__ == '__main__':
     plac.call(main)
-
-
-# For Emacs users
-# ......................................................................
-# Local Variables:
-# mode: python
-# python-indent-offset: 4
-# End:
