@@ -1,0 +1,3 @@
+[submodule "textkind/printed_vs_handwritten"]
+	path = textkind/printed_vs_handwritten
+	url = git@github.com:seuretm/printed-vs-handwritten.git
