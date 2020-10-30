@@ -1,11 +1,29 @@
+'''
+main_body.py: implement central logic and control of TextKind
+
+Authors
+-------
+
+Michael Hucka <mhucka@caltech.edu> -- Caltech Library
+
+Copyright
+---------
+
+Copyright (c) 2020 by the California Institute of Technology.  This code
+is open-source software released under a 3-clause BSD license.  Please see the
+file "LICENSE" for more information.
+'''
+
+from   humanize import intcomma
 import json
 from   os import path
 from   sidetrack import log
 import sys
+from   typing import Generator
 
 import textkind
 
-from   common.data_utils import DATE_FORMAT, timestamp
+from   common.data_utils import DATE_FORMAT, timestamp, plural
 from   common.exceptions import *
 from   common.exit_codes import ExitCode
 from   common.file_utils import readable, writable
@@ -13,6 +31,9 @@ from   common.ui import UI, inform, warn, alert, alert_fatal
 
 from   .classify import TextKindClassifier
 
+
+# Class definitions.
+# .............................................................................
 
 class MainBody():
     '''Main body of TextKind.'''
@@ -74,16 +95,32 @@ class MainBody():
     def _do_main_work(self):
         '''Performs the core work of this program.'''
 
+        num_files = len(self.input_files)
+        inform(f'Classifying {intcomma(num_files)} {plural("image", num_files)}')
+
         classifier = TextKindClassifier()
-        results = [classifier.classify(file) for file in self.input_files]
+        results = classifier.classify(self.input_files)
 
         if self.output_file == sys.stdout:
-            for item in results:
-                extra = f" (handwritten: {item['handwritten']}, printed: {item['printed']})"
-                inform(f'{item["file"]}: {item["text kind"]} {extra}')
+            if isinstance(results, Generator):
+                for item in results:
+                    self._inform_of_result(item)
+            else:
+                self._inform_of_result(results)
         else:
+            # JSON format can't really be written incrementally, so we have to
+            # generate all the results first.
+            results = list(results)
             with open(self.output_file, 'w') as outfile:
                 json.dump(results, outfile, indent = 4)
             inform(f'Results writtent to {self.output_file}')
 
         inform('Done')
+
+
+    def _inform_of_result(self, item):
+        if self.extended:
+            details = f" (handwritten: {item['handwritten']}, printed: {item['printed']})"
+        else:
+            details = ''
+        inform(f'{item["file"]}: {item["text kind"]} {details}')
