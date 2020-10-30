@@ -18,7 +18,7 @@ from   math import exp
 from   os import path
 import pickle
 from   PIL import Image
-from   sidetrack import log
+from   sidetrack import log, logr
 import sys
 
 sys.path.append('../common')
@@ -50,13 +50,45 @@ class TextKindClassifier():
         self._classifier = TypegroupsClassifier.load(pickled_class)
 
 
-    def classify(self, file):
-        inform(f'Analyzing {file}')
+    def classify(self, inputs):
+        '''Analyzes images for handwritten or printed text.
+
+        If given a single image or file, analyzes it and returns a single
+        result.  If given a list, returns an iterator over the results of
+        analyzing each individual image or file.
+        '''
+
+        if isinstance(inputs, (list, tuple)):
+            return self.classify_list(inputs)
+        elif isinstance(inputs, Image.Image):
+            return self.classify_image(inputs)
+        else:
+            return self.classify_file(inputs)
+
+
+    def classify_list(self, inputs):
+        for item in inputs:
+            yield self.classify(item)
+
+
+    def classify_file(self, file):
+        if __debug__: log(f'classifying file {file}')
+        with Image.open(file, 'r') as image:
+            return self.classify_image(image)
+
+
+    def classify_image(self, image):
+        file = image.filename if hasattr(image, 'filename') else None
+        if __debug__: log(f'classifying image {image} (from {file})')
         # The classifier has a hardwired assumption that the inputs have
         # 3 channels.  If we get a grayscale image, we have to convert it.
-        with Image.open(file, 'r').convert('RGB') as img:
-            data = self._classifier.classify(img, 75, 64, False)
-            kind = 'printed' if data['printed'] > data['handwritten'] else 'handwritten'
-            return {'file': file, 'text kind': kind,
-                    'printed': data['printed'],
-                    'handwritten': data['handwritten']}
+        image = image.convert('RGB')
+        data = self._classifier.classify(image, 75, 64, False)
+        kind = 'printed' if data['printed'] > data['handwritten'] else 'handwritten'
+        results = {'text kind': kind,
+                   'printed': data['printed'],
+                   'handwritten': data['handwritten']}
+        if file:
+            results['file'] = file
+        if __debug__: log('image classification results = {}', results)
+        return results
