@@ -96,10 +96,14 @@ class MainBody():
         '''Performs the core work of this program.'''
 
         num_files = len(self.input_files)
-        inform(f'Classifying {intcomma(num_files)} {plural("image", num_files)}')
+        inform(f'Will analyze {intcomma(num_files)} {plural("image", num_files)}.')
 
         classifier = TextKindClassifier()
         results = classifier.classify(self.input_files)
+
+        # The classify.py code in seutrm's printed_vs_handwritten normalizes
+        # the scores, but I don't think it's necessary b/c the larger value of
+        # 'printed' and 'handwritten' will always produce the higher score.
 
         if self.output_file == sys.stdout:
             if isinstance(results, Generator):
@@ -120,7 +124,7 @@ class MainBody():
 
     def _inform_of_result(self, item):
         if self.extended:
-            details = f" (handwritten: {item['handwritten']}, printed: {item['printed']})"
+            details = f" (handwritten: {item['handwritten']:.4f}, printed: {item['printed']:.4f})"
         else:
             details = ''
         inform(f'{item["file"]}: {item["text kind"]} {details}')
