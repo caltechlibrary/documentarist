@@ -14,13 +14,11 @@ is open-source software released under a 3-clause BSD license.  Please see the
 file "LICENSE" for more information.
 '''
 
-from   boltons import ecoutils
 import os
 from   os import path
 import plac
 from   sidetrack import set_debug, log, logr
 import sys
-import yaml
 
 sys.path.append('../common')
 
@@ -32,6 +30,7 @@ from   common.exceptions import *
 from   common.exit_codes import ExitCode
 from   common.file_utils import readable
 from   common.interruptions import interrupt, interrupted
+from   common.system_utils import system_profile
 from   common.ui import UI, inform, warn, alert, alert_fatal
 
 
@@ -77,7 +76,7 @@ include percentages indicating the strength of the assessment.
     # Do the real work --------------------------------------------------------
 
     if __debug__: log('='*8 + f' started {timestamp()} ' + '='*8)
-    if __debug__: log('system details:\n{}', yaml.dump(ecoutils.get_profile()))
+    if __debug__: log('system details:\n{}', system_profile())
     ui = body = exception = None
     try:
         ui = UI('TextKind', 'report whether text in image is handwritten or printed',
