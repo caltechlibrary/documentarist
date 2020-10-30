@@ -53,8 +53,8 @@ def main(extended = False, output = 'O', quiet = False,
 The results of the analysis are printed to the terminal's standard output
 stream by default.  If given the option -o (or /o on Windows), the results
 are instead written to the file indicated as the value of the option.  For
-example, "-o results.txt" will cause the analysis results to be written,
-one line per file, in "results.txt".
+example, "-o results.json" will cause the analysis results to be written
+to file "results.json".
 
 The output by default is simply a classification of the content, given as
 one of the following words:
