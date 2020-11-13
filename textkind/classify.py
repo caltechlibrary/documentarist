@@ -26,7 +26,8 @@ sys.path.append('../common')
 from   common.ui import UI, inform, warn, alert, alert_fatal
 from   common.exceptions import *
 
-sys.path.append('printed_vs_handwritten')
+this_directory = path.dirname(path.abspath(__file__))
+sys.path.append(path.join(this_directory, 'printed_vs_handwritten'))
 
 from   printed_vs_handwritten import ocrd_typegroups_classifier
 from   printed_vs_handwritten.ocrd_typegroups_classifier.typegroups_classifier import TypegroupsClassifier
@@ -44,7 +45,8 @@ _TGC_MODEL_FILE = 'classifier.tgc'
 class TextKindClassifier():
 
     def __init__(self):
-        pickled_class = path.join('printed_vs_handwritten',
+        pickled_class = path.join(this_directory,
+                                  'printed_vs_handwritten',
                                   'ocrd_typegroups_classifier',
                                   'models', 'classifier.tgc')
         self._classifier = TypegroupsClassifier.load(pickled_class)
