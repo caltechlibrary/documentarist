@@ -39,6 +39,8 @@ class MainBody():
     '''Main body of TextKind.'''
 
     def __init__(self, **kwargs):
+        '''Initialize internal state.'''
+
         # Assign parameters to self to make them available within this object.
         for key, value in kwargs.items():
             setattr(self, key, value)
@@ -49,7 +51,7 @@ class MainBody():
 
 
     def run(self):
-        '''Run the main body, using user interface object "ui".'''
+        '''Run the main body.'''
 
         if __debug__: log('running MainBody')
         try:
@@ -127,4 +129,4 @@ class MainBody():
             details = f" (handwritten: {item['handwritten']:.4f}, printed: {item['printed']:.4f})"
         else:
             details = ''
-        inform(f'{item["file"]}: {item["text kind"]} {details}')
+        inform(f'{item["file"]}: {item["text kind"]} {details}', force = True)
