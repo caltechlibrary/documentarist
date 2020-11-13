@@ -55,13 +55,18 @@ _CLI_THEME = Theme({
 # callers to do it.  They are meant to be used largely like basic functions
 # such as "print()" are used in Python.
 
-def inform(text, *args):
+def inform(text, *args, **kwargs):
     '''Print an informational message to the user.  The 'text' can contain
     string format placeholders such as "{}", and the additional arguments in
     args are values to use in those placeholders.
+
+    By default, the message will not be printed if the UI has been given
+    the "quiet" flag.  However, if this method is passed the keyword
+    argument "force" with a value of True, then the "quiet" setting will
+    be overridden and the message printed anyway.
     '''
     ui = UI.instance()
-    ui.inform(text, *args)
+    ui.inform(text, *args, **kwargs)
 
 
 def warn(text, *args):
@@ -167,7 +172,7 @@ class UIBase:
 
     # Methods to show messages to the user ------------------------------------
 
-    def inform(self, text, *args):                    raise NotImplementedError
+    def inform(self, text, *args, **kwargs):          raise NotImplementedError
     def warn(self, text, *args):                      raise NotImplementedError
     def alert(self, text, *args):                     raise NotImplementedError
     def alert_fatal(self, text, *args, **kwargs):     raise NotImplementedError
@@ -262,9 +267,14 @@ class CLI(UIBase):
             self._queue.put((text, style))
 
 
-    def inform(self, text, *args):
-        '''Print an informational message.'''
-        if not self._be_quiet:
+    def inform(self, text, *args, **kwargs):
+        '''Print an informational message.
+
+        By default, the message will not be printed if the UI has been given
+        the "quiet" flag.  However, if this method is passed the keyword
+        argument "force" with a value of True, then the "quiet" setting will
+        be overridden and the message printed anyway.'''
+        if ('force' in kwargs and kwargs['force']) or not self._be_quiet:
             self._print_or_queue(text.format(*args), 'info')
         else:
             if __debug__: log(text, *args)
