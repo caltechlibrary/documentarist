@@ -14,6 +14,9 @@ is open-source software released under a 3-clause BSD license.  Please see the
 file "LICENSE" for more information.
 '''
 
+from   commonpy.data_utils import DATE_FORMAT, timestamp
+from   commonpy.file_utils import readable
+from   commonpy.system_utils import system_profile
 import os
 from   os import path
 import plac
@@ -25,12 +28,9 @@ sys.path.append('../common')
 import textkind
 from   .main_body import MainBody
 
-from   common.data_utils import DATE_FORMAT, timestamp
 from   common.exceptions import *
 from   common.exit_codes import ExitCode
-from   common.file_utils import readable
 from   common.interruptions import interrupt, interrupted
-from   common.system_utils import system_profile
 from   common.ui import UI, inform, warn, alert, alert_fatal
 
 
@@ -113,7 +113,11 @@ include percentages indicating the strength of the assessment.
                 details = ''.join(format_tb(exception.__traceback__))
                 logr(f'Exception: {msg}\n{details}')
             exit_code = ExitCode.exception
+
+    # And exit ----------------------------------------------------------------
+
     if __debug__: log('_'*8 + f' stopped {timestamp()} ' + '_'*8)
+    if __debug__: log(f'exiting with exit code {exit_code}')
     exit(int(exit_code))
 
 
