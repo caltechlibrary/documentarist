@@ -14,6 +14,8 @@ is open-source software released under a 3-clause BSD license.  Please see the
 file "LICENSE" for more information.
 '''
 
+from   commonpy.data_utils import DATE_FORMAT, timestamp, plural
+from   commonpy.file_utils import readable, writable
 from   humanize import intcomma
 import json
 from   os import path
@@ -23,10 +25,8 @@ from   typing import Generator
 
 import textkind
 
-from   common.data_utils import DATE_FORMAT, timestamp, plural
 from   common.exceptions import *
 from   common.exit_codes import ExitCode
-from   common.file_utils import readable, writable
 from   common.ui import UI, inform, warn, alert, alert_fatal
 
 from   .classify import TextKindClassifier
