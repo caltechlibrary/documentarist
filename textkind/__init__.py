@@ -18,3 +18,5 @@ Copyright (c) 2020 by the California Institute of Technology.  This code
 is open-source software released under a 3-clause BSD license.  Please see the
 file "LICENSE" for more information.
 '''
+
+from .classify import TextKindClassifier
