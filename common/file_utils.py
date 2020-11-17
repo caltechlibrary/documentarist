@@ -54,10 +54,70 @@ def writable(dest):
         return dir_writable(path.dirname(dest))
 
 
-def module_path():
-    '''Returns the absolute path to our module installation directory.'''
-    # The path returned by module.__path__ is to the directory containing
-    # the __init__.py file.
-    stack = inspect.stack()[1]
-    package = inspect.getmodule(stack[0]).__package__
-    return path.abspath(path.dirname(sys.modules[package].__file__))
+def nonempty(dest):
+    '''Returns True if the file is not empty.'''
+    return os.stat(dest).st_size != 0
+
+
+def files_in_directory(dir, extensions = None, recursive = True):
+    if not path.isdir(dir):
+        return []
+    if not readable(dir):
+        return []
+    files = []
+    for item in os.listdir(dir):
+        full_path = path.join(dir, item)
+        if path.isfile(full_path) and readable(full_path):
+            if extensions and filename_extension(item) in extensions:
+                files.append(full_path)
+        elif path.isdir(full_path) and recursive:
+            files += files_in_directory(full_path, extensions)
+    return sorted(files)
+
+
+def filename_basename(file):
+    parts = file.rpartition('.')
+    if len(parts) > 1:
+        return ''.join(parts[:-1]).rstrip('.')
+    else:
+        return file
+
+
+def filename_extension(file):
+    parts = file.rpartition('.')
+    if len(parts) > 1:
+        return '.' + parts[-1].lower()
+    else:
+        return ''
+
+
+def alt_extension(filepath, ext):
+    '''Returns the 'filepath' with the extension replaced by 'ext'.  The
+    extension given in 'ext' should NOT have a leading period: that is, it
+    should be "foo", not ".foo".'''
+    return path.splitext(filepath)[0] + '.' + ext
+
+
+def filter_by_extensions(item_list, endings):
+    if not item_list:
+        return []
+    if not endings:
+        return item_list
+    results = item_list
+    for ending in endings:
+        results = list(filter(lambda name: ending not in name.lower(), results))
+    return results
+
+
+def relative(file):
+    '''Returns a path that is relative to the current directory.  If the
+    relative path would require more than one parent step (i.e., ../../*
+    instead of ../*) then it will return an absolute path instead.  If the
+    argument is actuall a file path, it will return it unchanged.'''
+    if is_url(file):
+        return file
+    candidate = path.relpath(file, os.getcwd())
+    if not candidate.startswith('../..'):
+        return candidate
+    else:
+        return path.realpath(candidate)
