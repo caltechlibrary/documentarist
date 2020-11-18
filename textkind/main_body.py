@@ -58,7 +58,8 @@ class MainBody():
             self._do_preflight()
             self._do_main_work()
         except Exception as ex:
-            self.exception = ex
+            if __debug__: log(f'exception in main body: {str(ex)}')
+            self.exception = sys.exc_info()
         if __debug__: log('finished MainBody')
 
 
@@ -120,8 +121,6 @@ class MainBody():
             with open(self.output_file, 'w') as outfile:
                 json.dump(results, outfile, indent = 4)
             inform(f'Results writtent to {self.output_file}')
-
-        inform('Done')
 
 
     def _inform_of_result(self, item):
