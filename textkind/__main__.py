@@ -14,13 +14,16 @@ is open-source software released under a 3-clause BSD license.  Please see the
 file "LICENSE" for more information.
 '''
 
+from   boltons.debugutils import pdb_on_signal
 from   commonpy.data_utils import DATE_FORMAT, timestamp
 from   commonpy.file_utils import readable
+from   commonpy.interrupt import config_interrupt
 from   commonpy.system_utils import system_profile
 import os
 from   os import path
 import plac
 from   sidetrack import set_debug, log, logr
+import signal
 import sys
 
 sys.path.append('../common')
@@ -72,6 +75,9 @@ include percentages indicating the strength of the assessment.
         set_debug(True, debug, extra = "%(threadName)s")
         import faulthandler
         faulthandler.enable()
+        if not sys.platform.startswith('win'):
+            # Even with a different signal, I can't get this to work on Win.
+            pdb_on_signal(signal.SIGUSR1)
 
     # Do the real work --------------------------------------------------------
 
@@ -84,14 +90,9 @@ include percentages indicating the strength of the assessment.
         ui.start()
         body = MainBody(input_files = files, extended = extended,
                         output_file = None if output == 'O' else output)
+        config_interrupt(body.stop, UserCancelled(ExitCode.user_interrupt))
         body.run()
         exception = body.exception
-    except (KeyboardInterrupt, UserCancelled) as ex:
-        # In Python, the main thread (i.e., this one) is the one that gets ^C.
-        alert('Quit received; shutting down ...')
-        interrupt()
-        body.stop()
-        exception = sys.exc_info()
     except Exception as ex:
         # MainBody exceptions are caught in its thread, so this is something else.
         exception = sys.exc_info()
@@ -100,19 +101,22 @@ include percentages indicating the strength of the assessment.
 
     exit_code = ExitCode.success
     if exception:
-        if type(exception) == CannotProceed:
-            exit_code = exception.args[0]
-        elif type(exception) in [KeyboardInterrupt, UserCancelled]:
-            if __debug__: log(f'received {exception[1].__class__.__name__}')
+        if exception[0] == CannotProceed:
+            exit_code = exception[1].args[0]
+        elif exception[0] in [KeyboardInterrupt, UserCancelled]:
+            if __debug__: log(f'received {exception[0].__name__}')
+            warn('Interrupted.')
             exit_code = ExitCode.user_interrupt
         else:
-            alert_fatal(f'A fatal error occurred: {exception}')
-            if __debug__:
-                from traceback import format_tb
-                msg = str(exception)
-                details = ''.join(format_tb(exception.__traceback__))
-                logr(f'Exception: {msg}\n{details}')
+            msg = str(exception[1])
+            alert_fatal(f'Encountered error {exception[0].__name__}: {msg}')
             exit_code = ExitCode.exception
+            if __debug__:
+                from traceback import format_exception
+                details = ''.join(format_exception(*exception))
+                logr(f'Exception: {msg}\n{details}')
+    else:
+        inform('Done.')
 
     # And exit ----------------------------------------------------------------
 
