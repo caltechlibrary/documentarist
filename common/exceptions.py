@@ -44,3 +44,7 @@ class CorruptedContent(DocumentaristException):
 class InternalError(DocumentaristException):
     '''Unrecoverable problem involving textform itself.'''
     pass
+
+class FileError(DocumentaristException):
+    '''Problem reading or writing a file or its attributes.'''
+    pass
