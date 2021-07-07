@@ -32,8 +32,8 @@ from   common.exceptions import UserCancelled, FileError, CannotProceed
 from   common.exit_codes import ExitCode
 
 import documentarist
-from   documentarist.command import command_list, class_help, safely_wrapped
-from   documentarist.command import docstring_summary
+from   documentarist import print_version
+from   documentarist.command import Command, docstring_summary, command_list
 from   documentarist.config import Config
 
 
@@ -45,7 +45,7 @@ from   documentarist.config import Config
 # The dispatch approach used here was inspired by C. Seibert's 2014 blog post:
 # https://chase-seibert.github.io/blog/2014/03/21/python-multilevel-argparse.html
 
-class Main():
+class Main(Command):
     '''"dm" is the command-line interface for Documentarist, a system that
     takes images of documents and photos, and extracts text and other data
     using a combination of cloud-based services and local computation.  The
@@ -54,7 +54,9 @@ class Main():
     '''
 
     def __init__(self, arg_list):
-        '''Create the parser, parse the arguments, and dispatch commands.'''
+        # Note we deliberately do not call super().__init__() here.
+
+        # Set up top-level command interface ----------------------------------
 
         parser = ArgumentParser(description = docstring_summary(self),
                                 formatter_class = RawDescriptionHelpFormatter)
@@ -153,23 +155,6 @@ class Main():
             os._exit(int(exit_code))
         else:
             exit(int(exit_code))
-
-
-    def help(self, args):
-        '''Print detailed help information, and exit.'''
-        parser = ArgumentParser(description = 'Print help for commands',
-                                usage = '%(prog)s help [name]')
-
-        parser.add_argument('name', nargs = '?', action = 'store')
-        subargs = parser.parse_args(args)
-        if subargs.name is None:
-            print(class_help(self))
-        elif subargs.name in dir(self):
-            docstring = getattr(self, subargs.name).__doc__
-            print(safely_wrapped(cleandoc(docstring)))
-        else:
-            alert(f'Unrecognized command: "{subargs.name}"')
-            print(class_help(self))
 
 
     def version(self, args):
