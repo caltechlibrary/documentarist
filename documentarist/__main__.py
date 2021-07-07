@@ -83,8 +83,6 @@ class Main(Command):
 
         if args.debug:
             set_debug(True, args.debug, extra = '%(threadName)s')
-            from rich.traceback import install as install_rich_traceback
-            install_rich_traceback()
             import faulthandler
             faulthandler.enable()
 
