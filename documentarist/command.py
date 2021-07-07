@@ -96,9 +96,10 @@ def docstring_summary(cls, cmd_name = ''):
     text += '\n\nThe following commands are available:\n\n'
 
     # Find the longest name, to help compute the indentation of the 2nd column.
-    longest = max(len(name) for name in dir(cls) if not name.startswith('_'))
+    methods = [name for name in dir(cls) if not name.startswith('_')]
+    longest = max(len(name) for name in methods)
     indent = longest + 2
-    for name in [name for name in dir(cls) if not name.startswith('_')]:
+    for name in methods:
         docstring = getattr(cls, name).__doc__
         if not docstring:
             continue
@@ -109,7 +110,8 @@ def docstring_summary(cls, cmd_name = ''):
 
 def class_help(cls, cmd_name = ""):
     text = docstring_summary(cls)
-    for name in [name for name in dir(cls) if not name.startswith('_')]:
+    methods = [name for name in dir(cls) if not name.startswith('_')]
+    for name in methods:
         if cmd_name:
             text += '\n' + cmd_name + ' ' + name + '\n'
             text += '~'*(len(cmd_name) + len(name) + 1) + '\n\n'
