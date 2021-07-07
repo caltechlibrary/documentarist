@@ -15,6 +15,7 @@ file "LICENSE" for more information.
 '''
 
 from   argparse import ArgumentParser, RawDescriptionHelpFormatter
+from   bun import UI, inform, warn, alert, alert_fatal
 from   inspect import cleandoc
 import re
 from   shutil import get_terminal_size
@@ -29,6 +30,8 @@ from   common.exit_codes import ExitCode
 
 class Command():
     '''Base class for Documentarist command-line command parsers.'''
+
+    _name = ''
 
     def __init__(self, name, arg_list):
         self._name = name
@@ -58,9 +61,8 @@ class Command():
 
     def help(self, args):
         '''Print detailed help information, and exit.'''
-        parser = ArgumentParser(description = 'Print help for commands',
-                                usage = '%(prog)s {self._name} help [name]')
-
+        usage = '%(prog)s {self._name}{" " if self._name else ""}help [name]'
+        parser = ArgumentParser(description = 'Print help', usage = usage)
         parser.add_argument('name', nargs = '?', action = 'store')
         subargs = parser.parse_args(args)
         if subargs.name is None:
