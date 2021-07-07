@@ -28,12 +28,20 @@ from   common.exit_codes import ExitCode
 # Exported classes.
 # .............................................................................
 
+# Command is designed to work both for the top-level command parser created
+# by the Main class in __main__.py and for subcommands.  All command parser
+# classes should all inherit from this class.  However, Main must NOT call
+# this __init__() function in its own __init__(), because Main adds its own
+# command arguments explicitly and is set up a little differently.  Only
+# subcommand classes should invoke Command's init, using super().__init__().
+
 class Command():
     '''Base class for Documentarist command-line command parsers.'''
 
     _name = ''
 
     def __init__(self, name, arg_list):
+        '''Create the parser, parse the arguments, and dispatch commands.'''
         self._name = name
 
         usage = f'%(prog)s {name}{" " if name else ""}[subcommand]'
