@@ -53,11 +53,9 @@ class Main(Command):
     interactively as well as from shell scripts.
     '''
 
-    def __init__(self, arg_list):
-        # Note we deliberately do not call super().__init__() here.
-
-        # Set up top-level command interface ----------------------------------
-
+    def __init__(self):
+        # Note we deliberately do not call super().__init__() here. We need to
+        # set up the parser a little bid differently, with additional options.
         parser = ArgumentParser(description = docstring_summary(self),
                                 formatter_class = RawDescriptionHelpFormatter)
         parser.add_argument('-c', '--configfile', action = 'store', metavar = 'C',
@@ -70,13 +68,18 @@ class Main(Command):
                             help = 'write trace to destination ("-" means console)')
         parser.add_argument('command', nargs='*',
                             help = 'Available commands: ' + command_list(self))
+        self._parser = parser
 
-        # Process arguments and handle early exits ----------------------------
 
-        args = parser.parse_args(arg_list[1:]) # Skip the program name.
+    def run(self, arg_list):
+        '''Process command-line arguments and run Documentarist functions.'''
+
+        args = self._parser.parse_args(arg_list[1:]) # Skip the program name.
 
         ui = UI('Documentarist', show_banner = False, be_quiet = args.quiet)
         ui.start()
+
+        # Handle special arguments and early exits ----------------------------
 
         if args.debug:
             set_debug(True, args.debug, extra = '%(threadName)s')
@@ -100,25 +103,28 @@ class Main(Command):
         # Do the real work ----------------------------------------------------
 
         exception = None
+        exit_code = ExitCode.success
         try:
             # config = Config(config_file = args.configfile, quiet = args.quiet,
             #                 debug = args.debug)
 
-            log('❚'*3 + f' started {timestamp()} ' + '❚'*3)
+            log('▼'*3 + f' started {timestamp()} ' + '▼'*3)
             log(f'given args: {args}')
 
             if args.command:
                 command_name = args.command[0]
-                if hasattr(self, command_name):
+                methods = {m for m in dir(self) if not m.startswith('_')}
+                available_commands = methods - {'run'}
+                if command_name in available_commands:
                     # Use the dispatch pattern to delegate to a command handler.
                     log(f'dispatching to {command_name}')
                     getattr(self, command_name)(args.command[1:])
                 else:
                     alert_fatal(f'Unrecognized command: "{command_name}"')
-                    parser.print_help()
+                    self._parser.print_help()
                     exit_code = ExitCode.bad_arg
             else:
-                parser.print_help()
+                self._parser.print_help()
 
             log('▲'*3 + f' stopped {timestamp()} ' + '▲'*3)
         except Exception as ex:
@@ -126,7 +132,6 @@ class Main(Command):
 
         # Try to deal with exceptions gracefully ------------------------------
 
-        exit_code = ExitCode.success
         if exception:
             if exception[0] == CannotProceed:
                 exit_code = exception[1].args[0]
@@ -179,9 +184,9 @@ class Main(Command):
 # option to setuptools.  The entry point for console_scripts has to be a
 # function that takes zero arguments.
 def console_scripts_main():
-    Main(sys.argv)
+    Main().run(sys.argv)
 
 
-# The following allows users to invoke this using "python3 -m zowie".
+# The following allows users to invoke this using "python3 -m documentarist".
 if __name__ == '__main__':
-    Main(sys.argv)
+    Main().run(sys.argv)
