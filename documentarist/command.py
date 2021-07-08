@@ -48,11 +48,9 @@ class Command():
         parser = ArgumentParser(description = docstring_summary(self, name),
                                 formatter_class = RawDescriptionHelpFormatter,
                                 add_help = False, usage = usage)
-
         parser.add_argument('subcommand', nargs = '*',
                             help = 'Available subcommands: ' + command_list(self))
 
-        # Skip the command name in the argument list.
         args = parser.parse_args(arg_list)
         if args.subcommand:
             command_name = args.subcommand[0]
