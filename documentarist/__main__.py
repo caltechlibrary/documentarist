@@ -23,7 +23,7 @@ from   inspect import cleandoc
 import os
 from   os.path import exists, join, dirname
 import re
-from   sidetrack import set_debug, log, logr
+from   sidetrack import set_debug, log, logr, loglist
 import sys
 from   sys import exit as exit
 from   textwrap import wrap, fill, dedent
@@ -34,7 +34,7 @@ from   common.exit_codes import ExitCode
 import documentarist
 from   documentarist import print_version
 from   documentarist.command import Command, docstring_summary, command_list
-from   documentarist.config import Config
+from   documentarist.config import Config, ConfigCommand
 
 
 # The main function.
@@ -103,11 +103,14 @@ class Main(Command):
         exception = None
         exit_code = ExitCode.success
         try:
-            # config = Config(config_file = args.configfile, quiet = args.quiet,
-            #                 debug = args.debug)
+            Config.load(args.configfile)
+            Config.set('debug', args.debug)
+            Config.set('quiet', args.quiet)
 
             log('▼'*3 + f' started {timestamp()} ' + '▼'*3)
             log(f'given args: {args}')
+            log(f'configuration:')
+            loglist(f'  {var} = {value}' for var, value in Config.settings())
 
             if args.command:
                 command_name = args.command[0]
@@ -115,7 +118,7 @@ class Main(Command):
                 available_commands = methods - {'run'}
                 if command_name in available_commands:
                     # Use the dispatch pattern to delegate to a command handler.
-                    log(f'dispatching to {command_name}')
+                    log(f'dispatching to command "{command_name}"')
                     getattr(self, command_name)(args.command[1:])
                 else:
                     alert_fatal(f'Unrecognized command: "{command_name}"')
@@ -153,8 +156,8 @@ class Main(Command):
         # And exit ------------------------------------------------------------
 
         if exit_code == ExitCode.user_interrupt:
-            # This is a sledgehammer, but it kills everything, including ongoing
-            # network get/post. I have not found a more reliable way to interrupt.
+            # This is a sledgehammer, but it kills everything including ongoing
+            # network calls. I haven't found a more reliable way to interrupt.
             os._exit(int(exit_code))
         else:
             exit(int(exit_code))
@@ -167,12 +170,12 @@ class Main(Command):
 
     def extract(self, args):
         '''Process document images to extract text and other information.'''
-        pass
+        ExtractCommand(args)
 
 
     def config(self, args):
         '''Configure Documentarist's behavior.'''
-        Config(args)
+        ConfigCommand(args)
 
 
 # Main entry point.

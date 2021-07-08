@@ -14,8 +14,11 @@ is open-source software released under a 3-clause BSD license.  Please see the
 file "LICENSE" for more information.
 '''
 
+from   appdirs import user_config_dir
 from   argparse import ArgumentParser, RawDescriptionHelpFormatter
 from   bun import UI, inform, warn, alert, alert_fatal
+from   configparser import ConfigParser
+from   os.path import exists, join, dirname
 
 from   documentarist.command import Command
 
@@ -23,7 +26,7 @@ from   documentarist.command import Command
 # Constants.
 # .............................................................................
 
-DEFAULT_CONFIG_FILE = 'documentarist.ini'
+CONFIG_FILE = 'documentarist.ini'
 '''
 The default name of a configuration file that Documentarist will look for in
 its installation directory if not explicitly given a configuration file to use.
@@ -31,11 +34,64 @@ The file must be in the format understood by Python 3's ConfigParser,
 (c.f. https://docs.python.org/3/library/configparser.html).
 '''
 
+CONFIG_DIR = user_config_dir('Documentarist', 'CaltechLibrary')
+'''
+The configuration directory for Documentarist for this user account on the
+current computer.  This varies by operating system.  Know values are:
+  macOS:  ~/Library/Application Support/Documentarist/
+  Linux:  ~/.config/documentarist/
+'''
+
 
 # Exported classes.
 # .............................................................................
 
-class Config(Command):
+class Config():
+    _config = ConfigParser()
+    _config_file = None
+
+    def __init__(self):
+        self._config.add_section('DEFAULT')
+
+
+    @staticmethod
+    def load(config_file):
+        if config_file:
+            Config._config_file = config_file
+            Config._config.read(config_file)
+        else:
+            # Look for and maybe load default config file.
+            alternatives = [CONFIG_FILE, join(CONFIG_DIR, CONFIG_FILE)]
+            for file in alternatives:
+                if exists(file):
+                    Config._config_file = file
+                    Config.load(file)
+                    break
+
+
+    @staticmethod
+    def get(name, section = 'DEFAULT'):
+        return Config._config.get(section, name)
+
+
+    @staticmethod
+    def set(name, value, section = 'DEFAULT'):
+        if name in Config._config[section]:
+            Config._config[section][name] = str(value)
+        else:
+            raise KeyError(f'Unknown config variable name: {name}')
+
+
+    @staticmethod
+    def settings():
+        entries = [('DEFAULT.config_file', Config._config_file)]
+        for section_name, section in Config._config.items():
+            for var, value in Config._config[section_name].items():
+                entries.append((f'{section_name}.{var}', value))
+        return entries
+
+
+class ConfigCommand(Command):
     '''Set or show Documentarist's configuration.
 
     Documentarist has a number of configuration parameters that control its
@@ -44,19 +100,17 @@ class Config(Command):
     each time it runs, in this order:
 
       1. the file given as the value of the --configfile option
-      2. a file named "documentarist.ini" the current directory
+      2. a file named "documentarist.ini" in the current directory
       3. a file named "documentarist.ini" either in the directory
          ~/Library/Application Support/Documentarist/ (macOS) or
          ~/.config/documentarist/ (Linux)
-      4. a file named "documentarist.ini" in the directory where Documentarist
-         is installed on the system
 
     The "config" commands can be used to display current configuration values
     as well as set configuration values.
     '''
 
-    def __init__(self, arg_list):
-        super().__init__("config", arg_list)
+    def __init__(self, args):
+        super().__init__('config', args)
 
 
     def show(self, args):
