@@ -23,7 +23,7 @@ from   inspect import cleandoc
 import os
 from   os.path import exists, join, dirname
 import re
-from   sidetrack import set_debug, log, logr, loglist
+from   sidetrack import set_debug, log, log, loglist
 import sys
 from   sys import exit as exit
 from   textwrap import wrap, fill, dedent
@@ -115,6 +115,7 @@ class Main(Command):
             if args.command:
                 command_name = args.command[0]
                 methods = {m for m in dir(self) if not m.startswith('_')}
+                # "run" is our internal main entry point; don't expose to users
                 available_commands = methods - {'run'}
                 if command_name in available_commands:
                     # Use the dispatch pattern to delegate to a command handler.
@@ -151,7 +152,7 @@ class Main(Command):
                     exit_code = ExitCode.exception
                 from traceback import format_exception
                 details = ''.join(format_exception(*exception))
-                logr(f'Exception: {str(ex)}\n{details}')
+                log(f'Exception: {str(ex)}\n{details}')
 
         # And exit ------------------------------------------------------------
 
