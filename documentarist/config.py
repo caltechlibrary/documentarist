@@ -17,8 +17,14 @@ file "LICENSE" for more information.
 from   appdirs import user_config_dir
 from   argparse import ArgumentParser, RawDescriptionHelpFormatter
 from   bun import UI, inform, warn, alert, alert_fatal
+from   commonpy.file_utils import readable, writable, copy_file
 from   configparser import ConfigParser
+from   os import makedirs
 from   os.path import exists, join, dirname
+from   sidetrack import log
+
+from   common.exceptions import CannotProceed
+from   common.exit_codes import ExitCode
 
 from   documentarist.command import Command
 
@@ -27,21 +33,23 @@ from   documentarist.command import Command
 # .............................................................................
 
 # Default configuration values, in the absence of anything else.
-DEFAULT_CONFIG = {
+DEFAULT_SETTINGS = {
     'documentarist': {
-        'config_file' : '',
         'quiet'       : False,
         'debug'       : False,
         'basename'    : 'document',
         'outputdir'   : '.'
-    }
+    },
+    'google': {
+        'creds_file': '',
+    },
+    'microsoft': {
+        'creds_file': '',
+    },
+    'amazon': {
+        'creds_file': '',
+    },
 }
-
-# The default name of a configuration file that Documentarist will look for in
-# its installation directory if not explicitly given a configuration file to
-# use. The file must be in the format understood by Python 3's ConfigParser,
-# (c.f. https://docs.python.org/3/library/configparser.html).
-DEFAULT_FILE = 'documentarist.ini'
 
 # The configuration directory for Documentarist for this user account on the
 # current computer.  This varies by operating system.  Know values are:
@@ -49,30 +57,60 @@ DEFAULT_FILE = 'documentarist.ini'
 #   Linux:  ~/.config/documentarist/
 CONFIG_DIR = user_config_dir('Documentarist', 'CaltechLibrary')
 
+# The default name of a configuration file that Documentarist will look for in
+# its installation directory if not explicitly given a configuration file to
+# use. The file must be in the format understood by Python 3's ConfigParser,
+# (c.f. https://docs.python.org/3/library/configparser.html).
+SETTINGS_FILE = 'documentarist.ini'
+
+# The names of files for service credentials.
+CREDENTIALS_FILES = {
+    'amazon'    : 'amazon_credentials.json',
+    'google'    : 'google_credentials.json',
+    'microsoft' : 'microsoft_credentials.json',
+}
+
 
 # Class definitions.
 # .............................................................................
 
 class ConfigStorage():
     '''Configuration storage class.'''
+
     _config = ConfigParser(allow_no_value = True)
+    _config_file = join(CONFIG_DIR, SETTINGS_FILE)
 
     def __init__(self):
-        ConfigStorage._config.read_dict(DEFAULT_CONFIG)
+        # Always begin by loading the built-in defaults. Any config loaded
+        # afterwards or set via the command line will override the defaults.
+        self._config.read_dict(DEFAULT_SETTINGS)
+
+        # We persist settings to a file in the config directory. Read it if
+        # it exists, else create it & initialize it with our built-in defaults.
+        if exists(self._config_file):
+            self.load(self._config_file)
+        else:
+            makedirs(CONFIG_DIR, exist_ok = True)
+            self.save()
 
 
     @staticmethod
-    def load(config_file = None):
+    def load(file = None):
         '''Loads a configuration from a file.
         If no argument is given, it attempts to load a default configuration
         files, looking first in the current directory and then in the program
         configuration directory identified by the constant CONFIG_DIR.
         '''
-        for file in [config_file, DEFAULT_FILE, join(CONFIG_DIR, DEFAULT_FILE)]:
-            if file and exists(file):
-                ConfigStorage._config['documentarist']['config_file'] = file
-                ConfigStorage._config.read(file)
-                break
+        if file and exists(file):
+            ConfigStorage._config.read(file)
+            ConfigStorage._config_file = file
+
+
+    @staticmethod
+    def save(file = None):
+        '''Save the current configuration values in the config file.'''
+        with open(file or ConfigStorage._config_file, 'w') as output_file:
+            ConfigStorage._config.write(output_file)
 
 
     @staticmethod
@@ -90,6 +128,7 @@ class ConfigStorage():
             return
         if name in ConfigStorage._config[section]:
             ConfigStorage._config[section][name] = str(value)
+            ConfigStorage.save()
         else:
             raise KeyError(f'Unknown config variable name: {name}')
 
@@ -108,18 +147,15 @@ class ConfigCommand(Command):
     '''Set or show Documentarist's configuration.
 
     Documentarist has a number of configuration parameters that control its
-    behavior.  The values of the parameters can be set in a configuration file.
-    Documentarist looks for a configuration file in the following locations
-    each time it runs, in this order:
+    behavior.  The values of the parameters are stored in configuration files
+    located in one of these directories (depending on the OS):
 
-      1. the file given as the value of the --configfile option
-      2. a file named "documentarist.ini" in the current directory
-      3. a file named "documentarist.ini" either in the directory
          ~/Library/Application Support/Documentarist/ (macOS) or
          ~/.config/documentarist/ (Linux)
 
-    The "config" commands can be used to display current configuration values
-    as well as set configuration values.
+    The configuration parameter values can be inspected and set using the
+    "config" command. Changed values are persisted by storing them in the
+    configuration file kept in the directory noted above.
     '''
 
     def __init__(self, args):
@@ -152,7 +188,6 @@ class ConfigCommand(Command):
 
         will change the naming pattern to "someothername-N".
         '''
-
         parser = ArgumentParser(description = 'Set the basename for downloaded files',
                                 usage = '%(prog)s config basename [-h] name')
 
@@ -160,7 +195,7 @@ class ConfigCommand(Command):
         subargs = parser.parse_args(args)
         if subargs.name:
             ConfigStorage.set('basename', subargs.name)
-        import pdb; pdb.set_trace()
+            ConfigStorage.save()
 
 
     def outputdir(self, args):
@@ -178,7 +213,21 @@ class ConfigCommand(Command):
 
         will change the output directory to /tmp.
         '''
-        print('invoked config outputdir')
+        parser = ArgumentParser(description = 'Set the output directory',
+                                usage = '%(prog)s config outputdir [-h] path')
+
+        parser.add_argument('path', action = 'store')
+        subargs = parser.parse_args(args)
+        if subargs.path:
+            if not exists(subargs.path):
+                alert_fatal(f'Directory does not exist: {subargs.path}')
+                raise CannotProceed(ExitCode.file_error)
+            elif not writable(subargs.path):
+                alert_fatal(f'Directory is not writable: {subargs.path}')
+                raise CannotProceed(ExitCode.file_error)
+
+            ConfigStorage.set('outputdir', subargs.path)
+            ConfigStorage.save()
 
 
     def auth(self, args):
@@ -203,9 +252,39 @@ class ConfigCommand(Command):
         credentials for each service.  Documentarist will copy the
         credentials to its configuration file and exit without doing anything
         else.
-
         '''
-        print('invoked config auth')
+        parser = ArgumentParser(description = 'Configure service credentials',
+                                usage = '%(prog)s config auth [-h] service file.json')
+
+        parser.add_argument('service', nargs = 1, action = 'store',
+                            help = 'service name ("google", "microsoft", or "amazon")')
+        parser.add_argument('file', nargs = '?', action = 'store',
+                            help = 'JSON file containing service credentials ')
+        subargs = parser.parse_args(args)
+        service = subargs.service[0].lower()
+        if service == 'help':
+            parser.print_help()
+        elif not subargs.file:
+            alert_fatal(f'Missing file argument after service name.')
+            raise CannotProceed(ExitCode.bad_arg)
+        elif not subargs.file.endswith('json'):
+            alert_fatal(f'File is expected to be a JSON file.')
+            raise CannotProceed(ExitCode.bad_arg)
+        elif service not in ['google', 'microsoft', 'amazon']:
+            alert_fatal(f'Uncrecognized service: {service}.')
+            raise CannotProceed(ExitCode.bad_arg)
+        else:
+            dest_file = join(CONFIG_DIR, credentials_filename(service))
+            copy_file(subargs.file, dest_file)
+            ConfigStorage.set('creds_file', dest_file, service)
+
+
+# Utilities
+# .............................................................................
+
+def credentials_filename(service):
+    assert service in CREDENTIALS_FILES
+    return CREDENTIALS_FILES[service]
 
 
 # Exported symbols.
