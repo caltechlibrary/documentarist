@@ -19,7 +19,7 @@ from   bun import UI, inform, warn, alert, alert_fatal
 from   inspect import cleandoc
 import re
 from   shutil import get_terminal_size
-from   sidetrack import set_debug, log, logr
+from   sidetrack import set_debug, log
 from   textwrap import wrap, fill, dedent
 
 from   common.exit_codes import ExitCode
