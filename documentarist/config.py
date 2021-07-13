@@ -26,67 +26,80 @@ from   documentarist.command import Command
 # Constants.
 # .............................................................................
 
-CONFIG_FILE = 'documentarist.ini'
-'''
-The default name of a configuration file that Documentarist will look for in
-its installation directory if not explicitly given a configuration file to use.
-The file must be in the format understood by Python 3's ConfigParser,
-(c.f. https://docs.python.org/3/library/configparser.html).
-'''
+# Default configuration values, in the absence of anything else.
+DEFAULT_CONFIG = {
+    'documentarist': {
+        'config_file' : '',
+        'quiet'       : False,
+        'debug'       : False,
+        'basename'    : 'document',
+        'outputdir'   : '.'
+    }
+}
 
+# The default name of a configuration file that Documentarist will look for in
+# its installation directory if not explicitly given a configuration file to
+# use. The file must be in the format understood by Python 3's ConfigParser,
+# (c.f. https://docs.python.org/3/library/configparser.html).
+DEFAULT_FILE = 'documentarist.ini'
+
+# The configuration directory for Documentarist for this user account on the
+# current computer.  This varies by operating system.  Know values are:
+#   macOS:  ~/Library/Application Support/Documentarist/
+#   Linux:  ~/.config/documentarist/
 CONFIG_DIR = user_config_dir('Documentarist', 'CaltechLibrary')
-'''
-The configuration directory for Documentarist for this user account on the
-current computer.  This varies by operating system.  Know values are:
-  macOS:  ~/Library/Application Support/Documentarist/
-  Linux:  ~/.config/documentarist/
-'''
 
 
-# Exported classes.
+# Class definitions.
 # .............................................................................
 
-class Config():
-    _config = ConfigParser()
-    _config_file = None
+class ConfigStorage():
+    '''Configuration storage class.'''
+    _config = ConfigParser(allow_no_value = True)
 
     def __init__(self):
-        self._config.add_section('DEFAULT')
+        ConfigStorage._config.read_dict(DEFAULT_CONFIG)
 
 
     @staticmethod
-    def load(config_file):
-        if config_file:
-            Config._config_file = config_file
-            Config._config.read(config_file)
-        else:
-            # Look for and maybe load default config file.
-            alternatives = [CONFIG_FILE, join(CONFIG_DIR, CONFIG_FILE)]
-            for file in alternatives:
-                if exists(file):
-                    Config._config_file = file
-                    Config.load(file)
-                    break
+    def load(config_file = None):
+        '''Loads a configuration from a file.
+        If no argument is given, it attempts to load a default configuration
+        files, looking first in the current directory and then in the program
+        configuration directory identified by the constant CONFIG_DIR.
+        '''
+        for file in [config_file, DEFAULT_FILE, join(CONFIG_DIR, DEFAULT_FILE)]:
+            if file and exists(file):
+                ConfigStorage._config['documentarist']['config_file'] = file
+                ConfigStorage._config.read(file)
+                break
 
 
     @staticmethod
-    def get(name, section = 'DEFAULT'):
-        return Config._config.get(section, name)
+    def get(name, section = 'documentarist'):
+        '''Returns the value of configuration variable 'name'.'''
+        return ConfigStorage._config.get(section, name)
 
 
     @staticmethod
-    def set(name, value, section = 'DEFAULT'):
-        if name in Config._config[section]:
-            Config._config[section][name] = str(value)
+    def set(name, value, section = 'documentarist'):
+        '''Sets the value of configuration variable 'name' to 'value'.
+        If 'value' is None, nothing is done; the value None is a no-op.
+        '''
+        if value is None:
+            return
+        if name in ConfigStorage._config[section]:
+            ConfigStorage._config[section][name] = str(value)
         else:
             raise KeyError(f'Unknown config variable name: {name}')
 
 
     @staticmethod
     def settings():
-        entries = [('DEFAULT.config_file', Config._config_file)]
-        for section_name, section in Config._config.items():
-            for var, value in Config._config[section_name].items():
+        '''Return a multiline string summarizing the current config.'''
+        entries = []
+        for section_name, section in ConfigStorage._config.items():
+            for var, value in ConfigStorage._config[section_name].items():
                 entries.append((f'{section_name}.{var}', value))
         return entries
 
@@ -115,7 +128,8 @@ class ConfigCommand(Command):
 
     def show(self, args):
         '''Print the current configuration and exit.'''
-        print('invoked config show')
+        for var, value in Config.settings():
+            print(f'{var} = "{value}"')
 
 
     def basename(self, args):
@@ -139,13 +153,14 @@ class ConfigCommand(Command):
         will change the naming pattern to "someothername-N".
         '''
 
-        print(f'in basename got {args}')
         parser = ArgumentParser(description = 'Set the basename for downloaded files',
                                 usage = '%(prog)s config basename [-h] name')
 
         parser.add_argument('name', action = 'store')
         subargs = parser.parse_args(args)
-        print(f'result = {subargs}')
+        if subargs.name:
+            ConfigStorage.set('basename', subargs.name)
+        import pdb; pdb.set_trace()
 
 
     def outputdir(self, args):
@@ -192,7 +207,8 @@ class ConfigCommand(Command):
         '''
         print('invoked config auth')
 
+
+# Exported symbols.
+# .............................................................................
 
-    def color(self, args):
-        '''Turn on or off coloring of terminal output.'''
-        print('invoked config color')
+Config = ConfigStorage()
