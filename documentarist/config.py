@@ -264,14 +264,14 @@ class ConfigCommand(Command):
         service = subargs.service[0].lower()
         if service == 'help':
             parser.print_help()
+        elif service not in ['google', 'microsoft', 'amazon']:
+            alert_fatal(f'Uncrecognized service name: {service}')
+            raise CannotProceed(ExitCode.bad_arg)
         elif not subargs.file:
             alert_fatal(f'Missing file argument after service name.')
             raise CannotProceed(ExitCode.bad_arg)
         elif not subargs.file.endswith('json'):
             alert_fatal(f'File is expected to be a JSON file.')
-            raise CannotProceed(ExitCode.bad_arg)
-        elif service not in ['google', 'microsoft', 'amazon']:
-            alert_fatal(f'Uncrecognized service: {service}.')
             raise CannotProceed(ExitCode.bad_arg)
         else:
             dest_file = join(CONFIG_DIR, credentials_filename(service))
