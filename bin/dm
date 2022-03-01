@@ -24,4 +24,4 @@ import documentarist
 from documentarist.__main__ import Main
 
 if __name__ == "__main__":
-    Main(sys.argv)
+    Main().run(sys.argv)
