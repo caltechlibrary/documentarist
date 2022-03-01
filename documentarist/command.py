@@ -115,7 +115,7 @@ def class_help(cls, cmd_name = ""):
             text += '~'*(len(cmd_name) + len(name) + 1) + '\n\n'
         else:
             text += '\n' + name + '\n'
-            text += '~'*(len(name) + 1) + '\n\n'
+            text += '~'*len(name) + '\n\n'
         method_docstring = cleandoc(getattr(cls, name).__doc__)
         text += safely_wrapped(method_docstring) + '\n'
     return text
