@@ -1,7 +1,8 @@
 import subprocess
 import sys
-sys.path.append('../common')
-from common.exceptions import *
+sys.path.append('..')
+from documentarist.exceptions import *
+
 
 def test_main_help(capsys):
     result = subprocess.run(['bin/dm'], capture_output = True)

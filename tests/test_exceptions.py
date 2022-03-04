@@ -1,6 +1,6 @@
 import sys
-sys.path.append('../common')
-from common.exceptions import *
+sys.path.append('..')
+from documentarist.exceptions import *
 
 def test_exceptions():
     try:
