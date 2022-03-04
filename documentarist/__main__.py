@@ -15,7 +15,6 @@ file "LICENSE" for more information.
 '''
 
 from   argparse import ArgumentParser, RawDescriptionHelpFormatter
-from   bun import UI, inform, warn, alert, alert_fatal
 from   commonpy.data_utils import timestamp
 from   commonpy.file_utils import readable
 from   commonpy.module_utils import module_path
@@ -23,18 +22,19 @@ from   inspect import cleandoc
 import os
 from   os.path import exists, join, dirname
 import re
-from   sidetrack import set_debug, log, log, loglist
 import sys
 from   sys import exit as exit
 from   textwrap import wrap, fill, dedent
 
-from   common.exceptions import UserCancelled, FileError, CannotProceed
-from   common.exit_codes import ExitCode
-
 import documentarist
 from   documentarist import print_version
 from   documentarist.command import Command, docstring_summary, command_list
+from   documentarist.command import available_commands
 from   documentarist.config import Config, ConfigCommand
+from   documentarist.exceptions import UserCancelled, FileError, CannotProceed
+from   documentarist.exit_codes import ExitCode
+from   documentarist.log import enable_logging, log
+from   documentarist.ui import UI, inform, warn, alert
 
 
 # The main function.
@@ -59,7 +59,7 @@ class Main(Command):
         parser = ArgumentParser(description = docstring_summary(self),
                                 formatter_class = RawDescriptionHelpFormatter)
         parser.add_argument('-c', '--configfile', action = 'store', metavar = 'C',
-                            help = 'use the specified configuration file')
+                            help = 'override configuration with values from file C')
         parser.add_argument('-q', '--quiet', action = 'store_true',
                             help = 'only print important messages while working')
         parser.add_argument('-V', '--version', action = 'store_true',
@@ -67,38 +67,37 @@ class Main(Command):
         parser.add_argument('-@', '--debug', action = 'store', metavar = 'OUT',
                             help = 'write trace to destination ("-" means console)')
         parser.add_argument('command', nargs='*',
-                            help = 'Available commands: ' + command_list(self))
+                            help = 'Available commands: ' + available_commands(self))
         self._parser = parser
 
 
-    def run(self, arg_list):
+    def _run(self, arg_list):
         '''Process command-line arguments and run Documentarist functions.'''
 
+        # Handle special arguments and early exits ----------------------------
+
         args = self._parser.parse_args(arg_list[1:]) # Skip the program name.
+
+        if args.version:                # User supplied -V.
+            args.command = ['version']
+
+        config_debug(args.debug)
+
+        # Do the real work ----------------------------------------------------
+
+        log('▼'*3 + f' started {timestamp()} ' + '▼'*3)
+        log('command line: ' + str(sys.argv))
 
         ui = UI('Documentarist', show_banner = False, be_quiet = args.quiet)
         ui.start()
 
-        # Handle special arguments and early exits ----------------------------
-
-        if args.debug:
-            set_debug(True, args.debug, extra = '%(threadName)s')
-            import faulthandler
-            faulthandler.enable()
-
-        if args.version:
-            print_version()
-            exit(int(ExitCode.success))
-
         if args.configfile:
             if not exists(args.configfile):
-                alert_fatal(f'Config file does not exist: {args.configfile}')
+                alert(f'Config file does not exist: {args.configfile}')
                 exit(int(ExitCode.bad_arg))
             elif not readable(args.configfile):
-                alert_fatal(f'Config file is not readable: {args.configfile}')
+                alert(f'Config file is not readable: {args.configfile}')
                 exit(int(ExitCode.file_error))
-
-        # Do the real work ----------------------------------------------------
 
         exception = None
         exit_code = ExitCode.success
@@ -106,31 +105,25 @@ class Main(Command):
             Config.load(args.configfile)
             Config.set('debug', args.debug)
             Config.set('quiet', args.quiet)
-
-            log('▼'*3 + f' started {timestamp()} ' + '▼'*3)
-            log(f'given args: {args}')
-            log(f'configuration:')
-            loglist(f'  {var} = {value}' for var, value in Config.settings())
+            Config.log_settings()
 
             if args.command:
                 command_name = args.command[0]
-                methods = {m for m in dir(self) if not m.startswith('_')}
-                # "run" is our internal main entry point; don't expose to users
-                available_commands = methods - {'run'}
-                if command_name in available_commands:
+                command_args = args.command[1:]
+                if command_name in command_list(self):
                     # Use the dispatch pattern to delegate to a command handler.
                     log(f'dispatching to command "{command_name}"')
-                    getattr(self, command_name)(args.command[1:])
+                    getattr(self, command_name)(command_args)
                 else:
-                    alert_fatal(f'Unrecognized command: "{command_name}"')
+                    alert(f'Unrecognized command: "{command_name}"')
                     self._parser.print_help()
                     exit_code = ExitCode.bad_arg
             else:
                 self._parser.print_help()
-
-            log('▲'*3 + f' stopped {timestamp()} ' + '▲'*3)
         except Exception as ex:
             exception = sys.exc_info()
+        finally:
+            log('▲'*3 + f' stopped {timestamp()} ' + '▲'*3)
 
         # Try to deal with exceptions gracefully ------------------------------
 
@@ -144,7 +137,7 @@ class Main(Command):
             else:
                 ex_cls = exception[0]
                 ex = exception[1]
-                alert_fatal(f'An error occurred ({ex_cls.__name__}): {str(ex)}')
+                alert(f'An error occurred ({ex_cls.__name__}): {str(ex)}')
                 # Return a better error code for some common cases.
                 if ex_cls in [FileNotFoundError, FileExistsError, PermissionError]:
                     exit_code = ExitCode.file_error
@@ -169,14 +162,34 @@ class Main(Command):
         print_version()
 
 
-    def extract(self, args):
-        '''Process document images to extract text and other information.'''
-        ExtractCommand(args)
-
-
     def config(self, args):
         '''Configure Documentarist's behavior.'''
         ConfigCommand(args)
+
+
+    def label(self, args):
+        '''Label documents with tags describing their content.'''
+        LabelCommand(args)
+
+
+    def extract(self, args):
+        '''Extract text and other information from documents.'''
+        ExtractCommand(args)
+
+
+# Miscellaneous utilities local to this module.
+# .............................................................................
+
+def config_debug(debug_destination):
+    '''Takes the value of the --debug flag & configures debugging accordingly.'''
+    if debug_destination:
+        enable_logging(debug_destination)
+        import faulthandler
+        faulthandler.enable()
+        if not os.name == 'nt':     # Can't use next part on Windows.
+            import signal
+            from boltons.debugutils import pdb_on_signal
+            pdb_on_signal(signal.SIGUSR1)
 
 
 # Main entry point.
@@ -186,9 +199,9 @@ class Main(Command):
 # option to setuptools.  The entry point for console_scripts has to be a
 # function that takes zero arguments.
 def console_scripts_main():
-    Main().run(sys.argv)
+    Main()._run(sys.argv)
 
 
 # The following allows users to invoke this using "python3 -m documentarist".
 if __name__ == '__main__':
-    Main().run(sys.argv)
+    Main()._run(sys.argv)
