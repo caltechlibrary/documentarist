@@ -15,14 +15,16 @@ file "LICENSE" for more information.
 '''
 
 from   argparse import ArgumentParser, RawDescriptionHelpFormatter
-from   bun import UI, inform, warn, alert, alert_fatal
 from   inspect import cleandoc
 import re
 from   shutil import get_terminal_size
 from   sidetrack import set_debug, log
 from   textwrap import wrap, fill, dedent
 
-from   common.exit_codes import ExitCode
+from   documentarist.exceptions import CannotProceed
+from   documentarist.exit_codes import ExitCode
+from   documentarist.log import log
+from   documentarist.ui import UI, inform, warn, alert
 
 
 # Exported classes.
@@ -58,7 +60,7 @@ class Command():
                 log(f'dispatching to {command_name}')
                 getattr(self, command_name)(args.subcommand[1:])
             else:
-                alert_fatal(f'Unrecognized command: "{command_name}"')
+                alert(f'Unrecognized command: "{command_name}"')
                 parser.print_help()
                 raise CannotProceed(ExitCode.bad_arg)
         else:
@@ -71,6 +73,7 @@ class Command():
         parser = ArgumentParser(description = 'Print help', usage = usage)
         parser.add_argument('name', nargs = '?', action = 'store')
         subargs = parser.parse_args(args)
+        log('printing help text')
         if subargs.name is None:
             print(class_help(self, self._name))
         elif subargs.name in dir(self):
@@ -85,8 +88,11 @@ class Command():
 # .............................................................................
 
 def command_list(cls):
-    methods = [name for name in dir(cls) if not name.startswith('_')]
-    return ', '.join(f'"{name}"' for name in methods)
+    return [name for name in dir(cls) if not name.startswith('_')]
+
+
+def available_commands(cls):
+    return ', '.join(f'"{name}"' for name in command_list(cls))
 
 
 def docstring_summary(cls, cmd_name = ''):
@@ -94,10 +100,10 @@ def docstring_summary(cls, cmd_name = ''):
     text += '\n\nThe following commands are available:\n\n'
 
     # Find the longest name, to help compute the indentation of the 2nd column.
-    methods = [name for name in dir(cls) if not name.startswith('_')]
-    longest = max(len(name) for name in methods)
+    commands = command_list(cls)
+    longest = max(len(name) for name in commands)
     indent = longest + 2
-    for name in methods:
+    for name in commands:
         docstring = getattr(cls, name).__doc__
         if not docstring:
             continue
@@ -108,8 +114,7 @@ def docstring_summary(cls, cmd_name = ''):
 
 def class_help(cls, cmd_name = ""):
     text = docstring_summary(cls)
-    methods = [name for name in dir(cls) if not name.startswith('_')]
-    for name in methods:
+    for name in command_list(cls):
         if cmd_name:
             text += '\n' + cmd_name + ' ' + name + '\n'
             text += '~'*(len(cmd_name) + len(name) + 1) + '\n\n'
