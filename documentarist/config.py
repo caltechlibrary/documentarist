@@ -16,18 +16,16 @@ file "LICENSE" for more information.
 
 from   appdirs import user_config_dir
 from   argparse import ArgumentParser, RawDescriptionHelpFormatter
-from   bun import UI, inform, warn, alert, alert_fatal
 from   commonpy.file_utils import readable, writable, copy_file
 from   configparser import ConfigParser
 from   os import makedirs
 from   os.path import exists, join, dirname
-from   sidetrack import log
-
-from   common.exceptions import CannotProceed
-from   common.exit_codes import ExitCode
 
 from   documentarist.command import Command
-
+from   documentarist.exceptions import CannotProceed
+from   documentarist.exit_codes import ExitCode
+from   documentarist.log import log
+from   documentarist.ui import UI, inform, warn, alert
 
 # Constants.
 # .............................................................................
@@ -85,14 +83,6 @@ class ConfigStorage():
         # afterwards or set via the command line will override the defaults.
         self._config.read_dict(DEFAULT_SETTINGS)
 
-        # We persist settings to a file in the config directory. Read it if
-        # it exists, else create it & initialize it with our built-in defaults.
-        if exists(self._config_file):
-            self.load(self._config_file)
-        else:
-            makedirs(CONFIG_DIR, exist_ok = True)
-            self.save()
-
 
     @staticmethod
     def load(file = None):
@@ -102,14 +92,18 @@ class ConfigStorage():
         configuration directory identified by the constant CONFIG_DIR.
         '''
         if file and exists(file):
+            log('loading configuration from file ' + file)
             ConfigStorage._config.read(file)
-            ConfigStorage._config_file = file
 
 
     @staticmethod
     def save(file = None):
         '''Save the current configuration values in the config file.'''
+        if not exists(ConfigStorage._config_file):
+            log('creating config dir ' + CONFIG_DIR)
+            makedirs(CONFIG_DIR, exist_ok = True)
         with open(file or ConfigStorage._config_file, 'w') as output_file:
+            log('writing config file ' + ConfigStorage._config_file)
             ConfigStorage._config.write(output_file)
 
 
@@ -124,11 +118,17 @@ class ConfigStorage():
         '''Sets the value of configuration variable 'name' to 'value'.
         If 'value' is None, nothing is done; the value None is a no-op.
         '''
-        if value is None:
-            return
         if name in ConfigStorage._config[section]:
-            ConfigStorage._config[section][name] = str(value)
-            ConfigStorage.save()
+            if not value:
+                log(f'no new value given for {section}.{name} -- leaving as-is')
+                return
+            value = str(value)
+            if ConfigStorage._config[section][name] != value:
+                log(f'setting {section}.{name} to {value}')
+                ConfigStorage._config[section][name] = str(value)
+                ConfigStorage.save()
+            else:
+                log(f'{section}.{name} value unchanged: {value}')
         else:
             raise KeyError(f'Unknown config variable name: {name}')
 
@@ -218,12 +218,14 @@ class ConfigCommand(Command):
 
         parser.add_argument('path', action = 'store')
         subargs = parser.parse_args(args)
-        if subargs.path:
+        if hasattr(subargs, 'path') and subargs.path == 'help':
+            parser.print_help()
+        elif subargs.path:
             if not exists(subargs.path):
-                alert_fatal(f'Directory does not exist: {subargs.path}')
+                alert(f'Directory does not exist: {subargs.path}')
                 raise CannotProceed(ExitCode.file_error)
             elif not writable(subargs.path):
-                alert_fatal(f'Directory is not writable: {subargs.path}')
+                alert(f'Directory is not writable: {subargs.path}')
                 raise CannotProceed(ExitCode.file_error)
 
             ConfigStorage.set('outputdir', subargs.path)
@@ -265,13 +267,13 @@ class ConfigCommand(Command):
         if service == 'help':
             parser.print_help()
         elif service not in ['google', 'microsoft', 'amazon']:
-            alert_fatal(f'Uncrecognized service name: {service}')
+            alert(f'Uncrecognized service name: {service}')
             raise CannotProceed(ExitCode.bad_arg)
         elif not subargs.file:
-            alert_fatal(f'Missing file argument after service name.')
+            alert(f'Missing file argument after service name.')
             raise CannotProceed(ExitCode.bad_arg)
         elif not subargs.file.endswith('json'):
-            alert_fatal(f'File is expected to be a JSON file.')
+            alert(f'File is expected to be a JSON file.')
             raise CannotProceed(ExitCode.bad_arg)
         else:
             dest_file = join(CONFIG_DIR, credentials_filename(service))
