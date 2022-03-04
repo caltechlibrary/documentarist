@@ -24,7 +24,7 @@ from   os.path import exists, join, dirname
 from   documentarist.command import Command
 from   documentarist.exceptions import CannotProceed
 from   documentarist.exit_codes import ExitCode
-from   documentarist.log import log
+from   documentarist.log import log, loglist
 from   documentarist.ui import UI, inform, warn, alert
 
 # Constants.
@@ -141,6 +141,13 @@ class ConfigStorage():
             for var, value in ConfigStorage._config[section_name].items():
                 entries.append((f'{section_name}.{var}', value))
         return entries
+
+
+    @staticmethod
+    def log_settings():
+        '''Log all the current settings to the log stream.'''
+        log(f'configuration:')
+        loglist(f'  {var} = {value}' for var, value in Config.settings())
 
 
 class ConfigCommand(Command):
