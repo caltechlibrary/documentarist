@@ -18,7 +18,6 @@ from   argparse import ArgumentParser, RawDescriptionHelpFormatter
 from   inspect import cleandoc
 import re
 from   shutil import get_terminal_size
-from   sidetrack import set_debug, log
 from   textwrap import wrap, fill, dedent
 
 from   documentarist.exceptions import CannotProceed
@@ -50,8 +49,7 @@ class Command():
         parser = ArgumentParser(description = docstring_summary(self, name),
                                 formatter_class = RawDescriptionHelpFormatter,
                                 add_help = False, usage = usage)
-        parser.add_argument('subcommand', nargs = '*',
-                            help = 'Available subcommands: ' + command_list(self))
+        parser.add_argument('subcommand', nargs = '*', help = available_commands(self))
 
         args = parser.parse_args(arg_list)
         if args.subcommand:
@@ -91,8 +89,18 @@ def command_list(cls):
     return [name for name in dir(cls) if not name.startswith('_')]
 
 
-def available_commands(cls):
-    return ', '.join(f'"{name}"' for name in command_list(cls))
+def available_commands(cls, conjunction = 'or'):
+    '''Return a string with a comma-separated list of commands on this class.
+
+    A conjunction is added before the final command. By default, "or" is used,
+    leading to a string of the form "foo, bar, or baz". The optional argument
+    'conjunction' can be used to change this. Setting the value to an empty
+    string will result in no conjunction being added.
+    '''
+    commands = command_list(cls)
+    list_with_conjunction = commands[0:-1] + [conjunction + ' ' + commands[-1]]
+    # The strip() removes extra whitespace that results if conjunction = ''.
+    return ', '.join(f'{item.strip()}' for item in list_with_conjunction)
 
 
 def docstring_summary(cls, cmd_name = ''):

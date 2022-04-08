@@ -66,8 +66,7 @@ class Main(Command):
                             help = 'print version info and exit')
         parser.add_argument('-@', '--debug', action = 'store', metavar = 'OUT',
                             help = 'write trace to destination ("-" means console)')
-        parser.add_argument('command', nargs='*',
-                            help = 'Available commands: ' + available_commands(self))
+        parser.add_argument('command', nargs = '*', help = available_commands(self))
         self._parser = parser
 
 
@@ -185,7 +184,7 @@ def config_debug(debug_destination):
     if debug_destination:
         enable_logging(debug_destination)
         import faulthandler
-        faulthandler.enable()
+        faulthandler.enable(all_threads = True)
         if not os.name == 'nt':     # Can't use next part on Windows.
             import signal
             from boltons.debugutils import pdb_on_signal
