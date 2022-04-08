@@ -94,6 +94,8 @@ class ConfigStorage():
         if file and exists(file):
             log('loading configuration from file ' + file)
             ConfigStorage._config.read(file)
+        else:
+            ConfigStorage._config.read(ConfigStorage._config_file)
 
 
     @staticmethod
@@ -102,8 +104,9 @@ class ConfigStorage():
         if not exists(ConfigStorage._config_file):
             log('creating config dir ' + CONFIG_DIR)
             makedirs(CONFIG_DIR, exist_ok = True)
-        with open(file or ConfigStorage._config_file, 'w') as output_file:
-            log('writing config file ' + ConfigStorage._config_file)
+        file_path = file or ConfigStorage._config_file
+        with open(file_path, 'w') as output_file:
+            log('writing config file ' + file_path)
             ConfigStorage._config.write(output_file)
 
 
