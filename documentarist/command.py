@@ -98,9 +98,12 @@ def available_commands(cls, conjunction = 'or'):
     string will result in no conjunction being added.
     '''
     commands = command_list(cls)
-    list_with_conjunction = commands[0:-1] + [conjunction + ' ' + commands[-1]]
+    if len(commands) > 1:
+        text_list = commands[0:-1] + [conjunction + ' ' + commands[-1]]
+    else:
+        text_list = [commands[0]]
     # The strip() removes extra whitespace that results if conjunction = ''.
-    return ', '.join(f'{item.strip()}' for item in list_with_conjunction)
+    return ', '.join(f'{item.strip()}' for item in text_list)
 
 
 def docstring_summary(cls, cmd_name = ''):
