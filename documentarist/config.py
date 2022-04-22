@@ -21,7 +21,7 @@ from   configparser import ConfigParser
 from   os import makedirs
 from   os.path import exists, join, dirname
 
-from   documentarist.command import Command
+from   documentarist.command import Command, method_parser
 from   documentarist.exceptions import CannotProceed
 from   documentarist.exit_codes import ExitCode
 from   documentarist.log import log, loglist
@@ -168,14 +168,23 @@ class ConfigCommand(Command):
     configuration file kept in the directory noted above.
     '''
 
-    def __init__(self, args):
-        super().__init__('config', args)
+    def __init__(self, arg_list):
+        super().__init__('config')
+        super()._invoke_with(arg_list)
 
 
     def show(self, args):
         '''Print the current configuration and exit.'''
-        for var, value in Config.settings():
-            print(f'{var} = "{value}"')
+        if args:
+            settings = dict(Config.settings())
+            for name in args:
+                if name in settings:
+                    print(f'{name} = {settings[name]}')
+                else:
+                    warn(f'Unrecognized setting name: {name}')
+        else:
+            for var, value in Config.settings():
+                print(f'{var} = "{value}"')
 
 
     def basename(self, args):
@@ -198,10 +207,11 @@ class ConfigCommand(Command):
 
         will change the naming pattern to "someothername-N".
         '''
-        parser = ArgumentParser(description = 'Set the basename for downloaded files',
-                                usage = '%(prog)s config basename [-h] name')
-
+        parser = method_parser(self.basename, summary = 'config basename <name>')
         parser.add_argument('name', action = 'store')
+        if not args or 'help' in args:
+            parser.print_help()
+            return
         subargs = parser.parse_args(args)
         if subargs.name:
             ConfigStorage.set('basename', subargs.name)
@@ -223,14 +233,13 @@ class ConfigCommand(Command):
 
         will change the output directory to /tmp.
         '''
-        parser = ArgumentParser(description = 'Set the output directory',
-                                usage = '%(prog)s config outputdir [-h] path')
-
+        parser = method_parser(self.outputdir, summary = 'config outputdir <path>')
         parser.add_argument('path', action = 'store')
-        subargs = parser.parse_args(args)
-        if hasattr(subargs, 'path') and subargs.path == 'help':
+        if not args or 'help' in args:
             parser.print_help()
-        elif subargs.path:
+            return
+        subargs = parser.parse_args(args)
+        if subargs.path:
             if not exists(subargs.path):
                 alert(f'Directory does not exist: {subargs.path}')
                 raise CannotProceed(ExitCode.file_error)
@@ -265,18 +274,17 @@ class ConfigCommand(Command):
         credentials to its configuration file and exit without doing anything
         else.
         '''
-        parser = ArgumentParser(description = 'Configure service credentials',
-                                usage = '%(prog)s config auth [-h] service file.json')
-
+        parser = method_parser(self.auth, summary = 'config auth <service> <file.json>')
         parser.add_argument('service', nargs = 1, action = 'store',
                             help = 'service name ("google", "microsoft", or "amazon")')
         parser.add_argument('file', nargs = '?', action = 'store',
                             help = 'JSON file containing service credentials ')
         subargs = parser.parse_args(args)
-        service = subargs.service[0].lower()
-        if service == 'help':
+        if not args or 'help' in args:
             parser.print_help()
-        elif service not in ['google', 'microsoft', 'amazon']:
+            return
+        service = subargs.service[0].lower()
+        if service not in ['google', 'microsoft', 'amazon']:
             alert(f'Uncrecognized service name: {service}')
             raise CannotProceed(ExitCode.bad_arg)
         elif not subargs.file:
@@ -289,6 +297,22 @@ class ConfigCommand(Command):
             dest_file = join(CONFIG_DIR, credentials_filename(service))
             copy_file(subargs.file, dest_file)
             ConfigStorage.set('creds_file', dest_file, service)
+
+
+    # def cluster(self, args):
+    #     '''Configure a cluster of worker nodes to use Ray.'''
+
+    #     parser = ArgumentParser(description = 'Config a cluster',
+    #                             usage = '%(prog)s config cluster config.yaml',
+    #                             add_help = False)
+    #     parser.add_argument('file', action = 'store',
+    #                         help = 'YAML file containing Ray cluster configuration')
+    #     subargs = parser.parse_args(args)
+    #     if hasattr(subargs, 'file') and subargs.file == 'help':
+    #         parser.print_help()
+    #     elif subargs.file:
+    #         # FIXME
+    #         pass
 
 
 # Utilities

@@ -37,3 +37,11 @@ def print_version():
     print(f'Authors: {__author__}')
     print(f'URL: {__url__}')
     print(f'License: {__license__}')
+
+
+# Miscellaneous constants.
+# .............................................................................
+
+# Output format for the files we write.
+_OUTPUT_FORMAT = 'png'
+_OUTPUT_EXT = '.png'

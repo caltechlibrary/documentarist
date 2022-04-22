@@ -33,6 +33,7 @@ from   documentarist.command import available_commands
 from   documentarist.config import Config, ConfigCommand
 from   documentarist.exceptions import UserCancelled, FileError, CannotProceed
 from   documentarist.exit_codes import ExitCode
+from   documentarist.label import LabelCommand
 from   documentarist.log import enable_logging, log
 from   documentarist.ui import UI, inform, warn, alert
 
@@ -75,9 +76,9 @@ class Main(Command):
 
         # Handle special arguments and early exits ----------------------------
 
-        args = self._parser.parse_args(arg_list[1:]) # Skip the program name.
+        args, others = self._parser.parse_known_args(arg_list[1:]) # Skip name.
 
-        if args.version:                # User supplied -V.
+        if args.version:                # Handle -V the same way as the command.
             args.command = ['version']
 
         config_debug(args.debug)
@@ -108,7 +109,7 @@ class Main(Command):
 
             if args.command:
                 command_name = args.command[0]
-                command_args = args.command[1:]
+                command_args = args.command[1:] + others
                 if command_name in command_list(self):
                     # Use the dispatch pattern to delegate to a command handler.
                     log(f'dispatching to command "{command_name}"')

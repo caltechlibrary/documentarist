@@ -15,6 +15,7 @@ file "LICENSE" for more information.
 '''
 
 from   argparse import ArgumentParser, RawDescriptionHelpFormatter
+from   functools import partial
 from   inspect import cleandoc
 import re
 from   shutil import get_terminal_size
@@ -41,28 +42,36 @@ class Command():
 
     _name = ''
 
-    def __init__(self, name, arg_list):
+    def __init__(self, name):
         '''Create the parser, parse the arguments, and dispatch commands.'''
-        self._name = name
-
+        # Set up a parser to intercept the command name and help requests.
         usage = f'%(prog)s {name}{" " if name else ""}[subcommand]'
         parser = ArgumentParser(description = docstring_summary(self, name),
                                 formatter_class = RawDescriptionHelpFormatter,
                                 add_help = False, usage = usage)
-        parser.add_argument('subcommand', nargs = '*', help = available_commands(self))
+        parser.add_argument('subcommand', nargs = '?', help = available_commands(self))
+        self._parser = parser
+        self._command = name
 
-        args = parser.parse_args(arg_list)
-        if args.subcommand:
-            command_name = args.subcommand[0]
+
+    def _invoke_with(self, arg_list):
+        '''Invoke this command's parser on the arguments in arg_list.'''
+        # First check if the command is help. If so, handle it, and we're done.
+        if not arg_list or arg_list[0] == 'help':
+            self._parser.print_help()
+            return
+
+        # Separate the command from its arguments & invoke the corresp. method
+        command, args = self._parser.parse_known_args(arg_list)
+        if command.subcommand:
+            command_name = command.subcommand
             if hasattr(self, command_name):
                 log(f'dispatching to {command_name}')
-                getattr(self, command_name)(args.subcommand[1:])
+                getattr(self, command_name)(args)
             else:
                 alert(f'Unrecognized command: "{command_name}"')
                 parser.print_help()
                 raise CannotProceed(ExitCode.bad_arg)
-        else:
-            parser.print_help()
 
 
     def help(self, args):
@@ -123,6 +132,10 @@ def docstring_summary(cls, cmd_name = ''):
     return text
 
 
+def method_help(method):
+    return safely_wrapped(cleandoc(method.__doc__))
+
+
 def class_help(cls, cmd_name = ""):
     text = docstring_summary(cls)
     for name in command_list(cls):
@@ -153,3 +166,10 @@ def safely_wrapped(content):
     paras = map(lambda s: re.sub('⁌', '  ', s), paras)
     # Put back inter-paragraph line breaks, and we're done.
     return '\n\n'.join(paras)
+
+
+def method_parser(method_function, summary, **kwargs):
+    return ArgumentParser(description = method_help(method_function),
+                          usage = '%(prog)s ' + summary,
+                          formatter_class = RawDescriptionHelpFormatter,
+                          add_help = False, **kwargs)
