@@ -1,0 +1,20 @@
+# =============================================================================
+# @file    .flake8
+# @brief   Project-wide Flake8 configuration
+# @created 2022-04-22
+# @license Please see the file named LICENSE in the project directory
+# @website https://github.com/caltechlibrary/documentarist
+# =============================================================================
+
+[flake8]
+ignore =
+    # I prefer to put spaces around the = in keyword arg lists.
+    E251,
+    # I try to stick to 80 chars but don't want to be hung up on it.
+    E501,
+    # I prefer two lines between methods of a class.
+    E303,
+    # Sometimes I prefer to align keywords and these rules run counter to it.
+    E271,
+    E221
+
