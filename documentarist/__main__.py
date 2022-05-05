@@ -17,25 +17,20 @@ file "LICENSE" for more information.
 from   argparse import ArgumentParser, RawDescriptionHelpFormatter
 from   commonpy.data_utils import timestamp
 from   commonpy.file_utils import readable
-from   commonpy.module_utils import module_path
-from   inspect import cleandoc
 import os
-from   os.path import exists, join, dirname
-import re
+from   os.path import exists
 import sys
-from   sys import exit as exit
-from   textwrap import wrap, fill, dedent
 
-import documentarist
 from   documentarist import print_version
 from   documentarist.command import Command, docstring_summary, command_list
 from   documentarist.command import available_commands
 from   documentarist.config import Config, ConfigCommand
-from   documentarist.exceptions import UserCancelled, FileError, CannotProceed
+from   documentarist.exceptions import UserCancelled, CannotProceed
 from   documentarist.exit_codes import ExitCode
+from   documentarist.extract import ExtractCommand
 from   documentarist.label import LabelCommand
 from   documentarist.log import enable_logging, log
-from   documentarist.ui import UI, inform, warn, alert
+from   documentarist.ui import UI, warn, alert
 
 
 # The main function.
@@ -76,7 +71,7 @@ class Main(Command):
 
         # Handle special arguments and early exits ----------------------------
 
-        args, others = self._parser.parse_known_args(arg_list[1:]) # Skip name.
+        args, others = self._parser.parse_known_args(arg_list[1:])  # Skip name.
 
         if args.version:                # Handle -V the same way as the command.
             args.command = ['version']
@@ -94,10 +89,10 @@ class Main(Command):
         if args.configfile:
             if not exists(args.configfile):
                 alert(f'Config file does not exist: {args.configfile}')
-                exit(int(ExitCode.bad_arg))
+                sys.exit(int(ExitCode.bad_arg))
             elif not readable(args.configfile):
                 alert(f'Config file is not readable: {args.configfile}')
-                exit(int(ExitCode.file_error))
+                sys.exit(int(ExitCode.file_error))
 
         exception = None
         exit_code = ExitCode.success
@@ -120,7 +115,7 @@ class Main(Command):
                     exit_code = ExitCode.bad_arg
             else:
                 self._parser.print_help()
-        except Exception as ex:
+        except Exception:               # noqa: PIE786
             exception = sys.exc_info()
         finally:
             log('▲'*3 + f' stopped {timestamp()} ' + '▲'*3)
@@ -154,7 +149,7 @@ class Main(Command):
             # network calls. I haven't found a more reliable way to interrupt.
             os._exit(int(exit_code))
         else:
-            exit(int(exit_code))
+            sys.exit(int(exit_code))
 
 
     def version(self, args):
@@ -186,7 +181,7 @@ def config_debug(debug_destination):
         enable_logging(debug_destination)
         import faulthandler
         faulthandler.enable(all_threads = True)
-        if not os.name == 'nt':     # Can't use next part on Windows.
+        if os.name != 'nt':             # Signal trap doesn't work on Windows.
             import signal
             from boltons.debugutils import pdb_on_signal
             pdb_on_signal(signal.SIGUSR1)
