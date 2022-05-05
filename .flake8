@@ -17,4 +17,11 @@ ignore =
     # Sometimes I prefer to align keywords and these rules run counter to it.
     E271,
     E221
-
+    # In some situations, it's more readable to omit spaces around operators
+    # and colons.
+    E203,
+    E226,
+    # According to Flake8 docs at https://www.flake8rules.com/rules/W503.html
+    # line breaks *should* come before a binary operator, but as of version 4,
+    # Flake8 still flags the breaks as bad. So:
+    W503
