@@ -1,0 +1,46 @@
+# =============================================================================
+# @file    pytest.yml
+# @brief   GitHub Actions workflowto run PyTest
+# @author  Michael Hucka <mhucka@caltech.edu>
+# @license Please see the file named LICENSE in the project directory
+# @website https://github.com/caltechlibrary/dibs
+# =============================================================================
+
+name: Run pytest
+
+on: push
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v2
+
+      # Set up Python (faster than using Python container)
+      - name: Setup Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: "3.x"
+
+      - name: Upgrade pip
+        run: |
+          python3 -m pip install --upgrade pip
+
+      - name: Get pip cache dir
+        id: pip-cache
+        run: echo "::set-output name=dir::$(pip cache dir)"
+
+      - name: Cache dependencies
+        uses: actions/cache@v2
+        with:
+          path: ${{ steps.pip-cache.outputs.dir }}
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements-dev.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Run test suite
+        run: |
+          pytest -vvv
