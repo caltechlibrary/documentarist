@@ -57,9 +57,9 @@ def enable_logging(dest = '-'):
     logger.remove()
     # We treat empty dest values as meaning "the default output".
     if dest in ['-', '', 'stderr', None] or type(dest) == type(sys.stderr):
-        logger.add(sys.stderr, level = 'TRACE', format = FORMAT)
+        logger.add(sys.stderr, level = 'TRACE', format = FORMAT, enqueue = True)
     else:
-        logger.add(dest, level = 'TRACE', format = FORMAT)
+        logger.add(dest, level = 'TRACE', format = FORMAT, enqueue = True)
 
 
 # You might think that the way to get the current caller info when the log
