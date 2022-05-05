@@ -1,0 +1,11 @@
+# =============================================================================
+# @file    requirements-dev.txt
+# @brief   Python dependencies for Documentarist for development
+# @created 2018-10-23
+# @license Please see the file named LICENSE in the project directory
+# @website https://github.com/caltechlibrary/documentarist
+# =============================================================================
+
+-r requirements.txt
+
+pytest
